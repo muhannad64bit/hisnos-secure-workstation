@@ -1,0 +1,43 @@
+# steam-cdn.list — Steam / Valve CDN domains for CIDR resolution
+#
+# Format: one domain per line, comments with #
+# Used by: egress/allowlists/update-cidrs.sh (Phase 2 tooling)
+# Purpose: resolve to CIDRs → populate steam_cidrs set (loaded by GameMode hooks)
+#
+# These CIDRs are only active during GameMode sessions (gaming_temp chain).
+# At idle, steam_cidrs is empty — no Steam traffic passes kernel-level.
+# Per-app Steam traffic outside gaming sessions goes through OpenSnitch prompts.
+#
+# Valve ASN 32590 ranges are hardcoded in hisnos-gaming.nft (stable).
+# These domain entries are for the CIDR refresh script to cross-validate.
+#
+# Refresh cadence: quarterly (Valve-owned ranges rarely change)
+# Refresh command: sudo egress/allowlists/update-cidrs.sh --target steam
+# ASN query:  whois -h whois.radb.net -- '-i origin AS32590' | grep ^route:
+
+# Valve / Steam primary endpoints
+store.steampowered.com
+api.steampowered.com
+steamcommunity.com
+cdn.steamstatic.com
+steambroadcast.akamaized.net
+
+# Steam game content delivery (Valve-owned servers)
+content1.steampowered.com
+content2.steampowered.com
+content3.steampowered.com
+content4.steampowered.com
+content5.steampowered.com
+content6.steampowered.com
+content7.steampowered.com
+content8.steampowered.com
+
+# Steam client updates and patches
+clientconfig.akamai.steamstatic.com
+cdn.akamai.steamstatic.com
+
+# Steam Authentication
+login.steampowered.com
+
+# Proton / DXVK compatibility (Valve-hosted Proton updates)
+repo.steampowered.com

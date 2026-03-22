@@ -1,0 +1,91 @@
+#!/usr/sbin/nft -f
+# hisnos-updates.nft — CIDR allowlist population for update infrastructure
+#
+# Loaded AFTER hisnos-base.nft (which declares the empty named sets).
+# Populates the fedora_update_cidrs and flatpak_cidrs sets with known-stable
+# CIDRs for Fedora and Flatpak infrastructure.
+#
+# MAINTENANCE: CDN CIDRs shift over time. Refresh periodically with:
+#   egress/allowlists/update-cidrs.sh   (Phase 2 tooling — resolves domains → CIDRs)
+#
+# To reload allowlists without reloading full ruleset:
+#   sudo nft flush set inet hisnos fedora_update_cidrs
+#   sudo nft -f /etc/nftables/hisnos-updates.nft
+#
+# To verify current set contents:
+#   sudo nft list set inet hisnos fedora_update_cidrs
+
+# ── Fedora infrastructure CIDRs ───────────────────────────────────────────────
+# Sources:
+#   dl.fedoraproject.org    → Fastly CDN (151.101.0.0/16)
+#   mirrors.fedoraproject.org → MirrorManager redirect (Fastly + regional)
+#   bodhi.fedoraproject.org → Fastly CDN
+#   koji.fedoraproject.org  → Red Hat datacenter (209.132.181.0/24)
+#   pagure.io               → Fastly CDN
+#   src.fedoraproject.org   → Red Hat datacenter
+#
+# Fastly CDN (151.101.0.0/16) is used broadly by Fedora Project.
+# Red Hat / IBM datacenter ranges are stable (owned ASN infrastructure).
+#
+# NOTE: These CIDRs permit rpm-ostree updates even without OpenSnitch running.
+# This is intentional — system updates are a trusted, kernel-approved operation.
+
+add element inet hisnos fedora_update_cidrs {
+    # Fastly CDN — Fedora Project primary CDN (dl.fedoraproject.org et al.)
+    # ASN 54113 — Fastly
+    151.101.0.0/16,
+
+    # Red Hat / IBM datacenter infrastructure
+    # ASN 25653 — Iomart (hosts fedoraproject.org)
+    # ASN 5650 — Frontier (Red Hat colocation)
+    209.132.180.0/23,   # Red Hat datacenter (fedoraproject.org)
+    38.145.60.0/24,     # Fedora infrastructure (copr, koji)
+
+    # Akamai CDN (used for some Fedora content delivery)
+    # ASN 20940 — Akamai Technologies
+    23.67.0.0/16,
+    23.196.0.0/16,
+    23.215.0.0/16,
+
+    # CloudFlare (used by some Fedora Project services)
+    # ASN 13335 — Cloudflare
+    104.16.0.0/13,
+    104.24.0.0/14
+}
+
+add element inet hisnos fedora_update_cidrs6 {
+    # Fastly CDN IPv6
+    2a04:4e42::/32,
+    # Red Hat IPv6 (approximate)
+    2620:52:0::/48
+}
+
+# ── Flatpak / Flathub CIDRs ───────────────────────────────────────────────────
+# Sources:
+#   dl.flathub.org          → Fastly CDN (151.101.0.0/16) — same as Fedora
+#   api.flathub.org         → Fastly CDN
+#   flathub.github.io       → GitHub Pages (185.199.108.0/22)
+#   objects.githubusercontent.com → GitHub CDN (varies)
+#
+# GitHub CIDRs for Flatpak app manifests and GitHub-hosted content:
+#   185.199.108.0/22 — GitHub Pages / Actions CDN
+#   140.82.112.0/20  — GitHub main infrastructure
+
+add element inet hisnos flatpak_cidrs {
+    # Fastly CDN (Flathub uses same CDN as Fedora)
+    151.101.0.0/16,
+
+    # GitHub infrastructure (Flathub metadata, app descriptions, some content)
+    # ASN 36459 — GitHub
+    185.199.108.0/22,
+    140.82.112.0/20,
+
+    # Amazon CloudFront (some Flatpak app content)
+    # Note: CloudFront range is broad — monitor for false-positive concerns
+    13.226.0.0/16,
+    13.227.0.0/16,
+
+    # CloudFlare (backup CDN for some Flatpak repos)
+    104.16.0.0/13,
+    104.24.0.0/14
+}

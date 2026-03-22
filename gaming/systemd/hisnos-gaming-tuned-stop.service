@@ -1,0 +1,29 @@
+[Unit]
+Description=HisnOS Gaming Privileged Tuning — Deactivate and Restore
+Documentation=https://github.com/hisnos/hisnos-secure-workstation
+Conflicts=hisnos-gaming-tuned-start.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/hisnos/gaming/hisnos-gaming-tuned.sh stop
+
+User=root
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_NICE CAP_SYS_RAWIO
+AmbientCapabilities=CAP_NET_ADMIN CAP_SYS_NICE CAP_SYS_RAWIO
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ReadWritePaths=/run/hisnos /proc/irq
+RuntimeDirectory=hisnos
+RuntimeDirectoryMode=0750
+
+TimeoutStartSec=30
+MemoryMax=32M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-gaming-tuned
+
+[Install]
+WantedBy=multi-user.target

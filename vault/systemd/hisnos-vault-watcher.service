@@ -1,0 +1,37 @@
+[Unit]
+Description=HisnOS vault auto-lock watcher (D-Bus screen lock + suspend)
+Documentation=file://%h/.local/share/hisnos/vault/hisnos-vault-watcher.sh
+# Start after the user session D-Bus socket is available
+After=dbus.socket
+
+# Restart if the watcher dies (gdbus/dbus-monitor process crash, etc.)
+# Do NOT restart if explicitly stopped by the user or admin
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/hisnos/vault/hisnos-vault-watcher.sh
+
+# Restart on any failure (process crash, exit non-zero)
+Restart=on-failure
+RestartSec=3
+
+# Environment: ensure XDG vars are set correctly for headless invocation
+Environment=HISNOS_VAULT_SCRIPT=%h/.local/share/hisnos/vault/hisnos-vault.sh
+# Do not inherit a login session's env directly — systemd --user sets the right vars
+
+# Security: tighten the service surface
+# No new privileges allowed (the vault script itself must not use sudo)
+NoNewPrivileges=true
+
+# Private /tmp so the FIFO does not leak to other users
+PrivateTmp=true
+
+# Standard output goes to journal (visible via: journalctl --user -u hisnos-vault-watcher)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-vault-watcher
+
+[Install]
+WantedBy=default.target

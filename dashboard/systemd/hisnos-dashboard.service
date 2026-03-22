@@ -1,0 +1,61 @@
+# dashboard/systemd/hisnos-dashboard.service — HisnOS Governance Dashboard service
+#
+# Runs the Go backend daemon. Activated on demand by hisnos-dashboard.socket
+# (first connection triggers start) or manually via systemctl --user start.
+#
+# Socket activation:
+#   When started by the socket unit, SD_LISTEN_FDS=1 is set in the environment.
+#   The daemon detects this and inherits fd 3 instead of binding a new socket.
+#   This allows zero-downtime restarts (socket stays bound during service restart).
+#
+# Deployment path:
+#   bootstrap/post-install.sh compiles the Go binary and installs it to
+#   ~/.local/share/hisnos/dashboard/hisnos-dashboard
+#
+# Journal tag: hisnos-dashboard  (SyslogIdentifier)
+#
+# Build the binary:
+#   cd dashboard/backend && go build -o ~/.local/share/hisnos/dashboard/hisnos-dashboard .
+
+[Unit]
+Description=HisnOS Governance Dashboard
+Documentation=https://github.com/hisnos/secure-workstation
+# Require socket unit (for socket activation model)
+Requires=hisnos-dashboard.socket
+After=hisnos-dashboard.socket
+# Start after the vault watcher (so vault state is observable from launch)
+After=hisnos-vault-watcher.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=3
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Binary installed by bootstrap/post-install.sh
+ExecStart=%h/.local/share/hisnos/dashboard/hisnos-dashboard
+
+# Stop cleanly within 10 seconds; SSE clients will reconnect after restart
+TimeoutStopSec=10
+
+# ── Environment ─────────────────────────────────────────────────────────────
+Environment=HISNOS_DIR=%h/.local/share/hisnos
+Environment=LOG_LEVEL=info
+# Dashboard listen address (ignored when started via socket activation)
+Environment=HISNOS_DASHBOARD_ADDR=127.0.0.1:7374
+
+# ── Security hardening ───────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+# Allow read/write to state file directory and hisnos scripts
+ReadWritePaths=/var/lib/hisnos
+ReadOnlyPaths=%h/.local/share/hisnos
+
+# ── Logging ─────────────────────────────────────────────────────────────────
+SyslogIdentifier=hisnos-dashboard
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,33 @@
+# flatpak-repos.list — Flatpak repository domains for CIDR resolution
+#
+# Format: one domain per line, comments with #
+# Used by: egress/allowlists/update-cidrs.sh (Phase 2 tooling)
+# Purpose: resolve to CIDRs → populate flatpak_cidrs set in hisnos-updates.nft
+#
+# Scope: app installation and updates via Flatpak CLI or GNOME Software.
+# Per-application outbound (e.g. Firefox browsing) is handled by OpenSnitch.
+#
+# Refresh cadence: monthly
+# Refresh command: sudo egress/allowlists/update-cidrs.sh --target flatpak
+
+# Flathub — primary Flatpak repository
+dl.flathub.org
+api.flathub.org
+flathub.org
+
+# Flathub content on GitHub
+flathub.github.io
+raw.githubusercontent.com
+objects.githubusercontent.com
+github.com
+
+# GNOME Flatpak repository (KDE Discover / GNOME Software default)
+sdk.gnome.org
+runtime.fedoraproject.org
+
+# KDE Flatpak repository (Plasma 6 apps)
+distribute.kde.org
+
+# Freedesktop Platform (runtime dependency for many Flatpak apps)
+# Hosted on Fastly CDN — covered by 151.101.0.0/16 static CIDR
+dl.flathub.org

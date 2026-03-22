@@ -1,0 +1,44 @@
+# update/systemd/hisnos-update-check.service — HisnOS update availability check service
+#
+# Runs 'hisnos-update check' to determine if updates are available.
+# Results written to /var/lib/hisnos/update-state.
+# Triggered by hisnos-update-check.timer (weekly) or manually.
+#
+# This service only CHECKS — it never downloads, stages, or applies updates.
+# User interaction is required for all update operations.
+
+[Unit]
+Description=HisnOS update availability check
+Documentation=https://github.com/hisnos/secure-workstation
+# Require network before running (do not fail if network never comes up — just wait)
+After=network-online.target
+Wants=network-online.target
+# Do not run if user session is not active (avoids check during unattended boot)
+ConditionUser=!root
+
+[Service]
+Type=oneshot
+# Never auto-restart: a failed check is not a failure condition worth retrying immediately
+Restart=no
+
+# Script location: matches bootstrap/post-install.sh deploy path
+ExecStart=%h/.local/share/hisnos/update/hisnos-update.sh check
+
+# Timeout: rpm-ostree --check should complete well within 3 minutes
+TimeoutStartSec=3min
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+# Allow read-write to the state file path (/var/lib/hisnos/)
+# Note: /var/lib/hisnos must be writable by the user; bootstrap creates it with correct perms.
+ReadWritePaths=/var/lib/hisnos
+
+# Logging: journal tag for easy filtering
+SyslogIdentifier=hisnos-update-check
+
+# Environment: ensure HOME and runtime dir are set
+Environment=HISNOS_DIR=%h/.local/share/hisnos
+
+[Install]
+WantedBy=default.target

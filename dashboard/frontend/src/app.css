@@ -1,0 +1,287 @@
+/* app.css — HisnOS Dashboard global design tokens and base styles */
+
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+  --bg:          #0d1117;
+  --surface:     #161b22;
+  --surface-2:   #21262d;
+  --border:      #30363d;
+  --text:        #c9d1d9;
+  --text-muted:  #8b949e;
+  --text-dim:    #484f58;
+
+  /* State colours */
+  --c-normal:            #3fb950;
+  --c-vault-mounted:     #d29922;
+  --c-gaming:            #bc8cff;
+  --c-lab-active:        #58a6ff;
+  --c-update-preparing:  #e3b341;
+  --c-update-pending:    #db6d28;
+  --c-rollback-mode:     #f85149;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --radius:    4px;
+  --gap:       1rem;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; }
+
+body {
+  background:  var(--bg);
+  color:       var(--text);
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  min-height:  100vh;
+}
+
+a { color: var(--c-lab-active); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+h1 { font-size: 1.25rem; font-weight: 600; }
+h2 { font-size: 1rem;    font-weight: 600; color: var(--text-muted); letter-spacing: .05em; }
+h3 { font-size: .9rem;   font-weight: 600; }
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.layout {
+  display:               grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows:    48px 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar main";
+  min-height: 100vh;
+}
+
+.topbar {
+  grid-area:   topbar;
+  display:     flex;
+  align-items: center;
+  gap:         var(--gap);
+  padding:     0 1.25rem;
+  background:  var(--surface);
+  border-bottom: 1px solid var(--border);
+  position:    sticky;
+  top:         0;
+  z-index:     10;
+}
+
+.topbar-title {
+  font-weight: 700;
+  font-size:   1rem;
+  color:       var(--text);
+  flex: 1;
+}
+
+.sidebar {
+  grid-area:   sidebar;
+  background:  var(--surface);
+  border-right: 1px solid var(--border);
+  padding:     1rem 0;
+  display:     flex;
+  flex-direction: column;
+  gap:         2px;
+  position:    sticky;
+  top:         48px;
+  height:      calc(100vh - 48px);
+  overflow-y:  auto;
+}
+
+.sidebar a {
+  display:     block;
+  padding:     .5rem 1.25rem;
+  color:       var(--text-muted);
+  border-left: 3px solid transparent;
+  transition:  color .15s, border-color .15s;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  color:        var(--text);
+  border-color: var(--c-normal);
+  text-decoration: none;
+}
+
+.main { grid-area: main; padding: 1.5rem; overflow-y: auto; }
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.card {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  padding:       1rem 1.25rem;
+}
+
+.card-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap:                   var(--gap);
+  margin-bottom:         1.5rem;
+}
+
+.card-title {
+  font-size:  .75rem;
+  font-weight: 600;
+  color:      var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: .5rem;
+}
+
+.card-value {
+  font-size:  1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.card-sub {
+  font-size:  .75rem;
+  color:      var(--text-muted);
+  margin-top: .25rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+button {
+  font-family:   var(--font-mono);
+  font-size:     .85rem;
+  cursor:        pointer;
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  padding:       .4rem .85rem;
+  background:    var(--surface-2);
+  color:         var(--text);
+  transition:    background .15s, border-color .15s;
+}
+
+button:hover:not(:disabled) {
+  background:    var(--surface);
+  border-color:  var(--text-muted);
+}
+
+button:disabled {
+  opacity: .4;
+  cursor:  not-allowed;
+}
+
+button.primary {
+  background:  #1f6feb;
+  border-color: #1f6feb;
+  color:       #fff;
+}
+button.primary:hover:not(:disabled) { background: #388bfd; }
+
+button.danger {
+  background:  #da3633;
+  border-color: #da3633;
+  color:       #fff;
+}
+button.danger:hover:not(:disabled) { background: #f85149; }
+
+button.warn {
+  background:  #9e6a03;
+  border-color: #9e6a03;
+  color:       #fff;
+}
+button.warn:hover:not(:disabled) { background: #d29922; }
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+input[type="password"],
+input[type="text"] {
+  font-family:   var(--font-mono);
+  font-size:     .85rem;
+  background:    var(--surface-2);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  color:         var(--text);
+  padding:       .4rem .75rem;
+  width:         100%;
+}
+
+input:focus { outline: 2px solid #1f6feb; outline-offset: 1px; }
+
+label {
+  display:     block;
+  font-size:   .8rem;
+  color:       var(--text-muted);
+  margin-bottom: .35rem;
+}
+
+.form-row { margin-bottom: .75rem; }
+.form-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+
+/* ── Status badge ────────────────────────────────────────────────────────── */
+.badge {
+  display:       inline-block;
+  padding:       .15rem .55rem;
+  border-radius: 999px;
+  font-size:     .72rem;
+  font-weight:   700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border:        1px solid transparent;
+}
+
+.badge.normal              { background: #0d2f1a; color: var(--c-normal);           border-color: var(--c-normal); }
+.badge.vault-mounted       { background: #2d1f05; color: var(--c-vault-mounted);     border-color: var(--c-vault-mounted); }
+.badge.gaming              { background: #1e1235; color: var(--c-gaming);            border-color: var(--c-gaming); }
+.badge.lab-active          { background: #061c36; color: var(--c-lab-active);        border-color: var(--c-lab-active); }
+.badge.update-preparing    { background: #2d2200; color: var(--c-update-preparing);  border-color: var(--c-update-preparing); }
+.badge.update-pending-reboot { background: #2d1800; color: var(--c-update-pending); border-color: var(--c-update-pending); }
+.badge.rollback-mode       { background: #2d0c0b; color: var(--c-rollback-mode);    border-color: var(--c-rollback-mode); }
+
+/* ── Alert/warning strips ────────────────────────────────────────────────── */
+.alert { padding: .5rem .75rem; border-radius: var(--radius); font-size: .82rem; margin-bottom: .75rem; }
+.alert-warn  { background: #2d2200; border: 1px solid var(--c-update-preparing); color: var(--c-update-preparing); }
+.alert-error { background: #2d0c0b; border: 1px solid var(--c-rollback-mode);   color: var(--c-rollback-mode); }
+.alert-ok    { background: #0d2f1a; border: 1px solid var(--c-normal);          color: var(--c-normal); }
+.alert-info  { background: #061c36; border: 1px solid var(--c-lab-active);      color: var(--c-lab-active); }
+
+/* ── Section headers ─────────────────────────────────────────────────────── */
+.section { margin-bottom: 2rem; }
+.section-title {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: .35rem;
+  margin-bottom: .75rem;
+}
+
+/* ── Code / log output ───────────────────────────────────────────────────── */
+.log-box {
+  background:    var(--surface-2);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  padding:       .75rem;
+  font-size:     .78rem;
+  max-height:    320px;
+  overflow-y:    auto;
+  white-space:   pre-wrap;
+  word-break:    break-all;
+  color:         var(--text-muted);
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display:       inline-block;
+  width:         .9em;
+  height:        .9em;
+  border:        2px solid var(--border);
+  border-top-color: var(--text-muted);
+  border-radius: 50%;
+  animation:     spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right:  .4em;
+}
+
+/* ── Utility ─────────────────────────────────────────────────────────────── */
+.flex-row { display: flex; align-items: center; gap: .5rem; }
+.muted     { color: var(--text-muted); }
+.mt        { margin-top: .75rem; }
+.mt2       { margin-top: 1.5rem; }

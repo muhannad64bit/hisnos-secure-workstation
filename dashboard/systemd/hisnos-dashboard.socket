@@ -1,0 +1,35 @@
+# dashboard/systemd/hisnos-dashboard.socket — HisnOS dashboard socket unit
+#
+# Creates the TCP socket before starting the dashboard service.
+# systemd holds the socket across service restarts (zero-downtime restart).
+# The backend inherits fd 3 via SD_LISTEN_FDS=1 (standard socket activation).
+#
+# Security:
+#   - Binds to 127.0.0.1 ONLY — never exposed externally
+#   - BindIPv6Only has no effect (IPv4-only bind); listed for clarity
+#   - No service can connect until hisnos-dashboard.service is running
+#
+# Install (user service):
+#   cp dashboard/systemd/hisnos-dashboard.{socket,service} ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now hisnos-dashboard.socket
+#
+# On-demand activation:
+#   The socket unit starts the service on first connection attempt.
+#   The service stops when idle (see hisnos-dashboard.service TimeoutStopSec).
+#
+# Browser access: http://localhost:7374
+
+[Unit]
+Description=HisnOS Governance Dashboard socket
+Documentation=https://github.com/hisnos/secure-workstation
+
+[Socket]
+# Loopback-only TCP socket — no external exposure
+ListenStream=127.0.0.1:7374
+
+# Pass the socket to the service on demand
+Accept=no
+
+[Install]
+WantedBy=sockets.target

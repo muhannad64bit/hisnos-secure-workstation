@@ -1,0 +1,142 @@
+[
+  {
+    "name": "Lock Vault",
+    "description": "Immediately lock the encrypted vault (gocryptfs)",
+    "keywords": ["vault", "lock", "encrypt", "secure", "close"],
+    "action": "ipc:lock_vault",
+    "icon": "security-high"
+  },
+  {
+    "name": "Unlock Vault",
+    "description": "Mount the encrypted vault (prompts for passphrase)",
+    "keywords": ["vault", "unlock", "mount", "decrypt", "open"],
+    "action": "shell:systemctl --user start hisnos-vault-unlock.service",
+    "icon": "security-medium"
+  },
+  {
+    "name": "Start Gaming Mode",
+    "description": "Activate gaming profile (GameMode + MangoHud + relaxed firewall)",
+    "keywords": ["gaming", "game", "gamemode", "mangohud", "performance"],
+    "action": "ipc:start_gaming",
+    "icon": "applications-games"
+  },
+  {
+    "name": "Stop Gaming Mode",
+    "description": "Deactivate gaming profile and restore strict firewall",
+    "keywords": ["gaming", "stop", "game", "exit", "normal"],
+    "action": "ipc:stop_gaming",
+    "icon": "applications-games"
+  },
+  {
+    "name": "Reload Firewall",
+    "description": "Reload nftables rules from disk (hisnos_egress table)",
+    "keywords": ["firewall", "nftables", "reload", "rules", "egress", "network"],
+    "action": "ipc:reload_firewall",
+    "icon": "network-firewall"
+  },
+  {
+    "name": "Start Kali Lab",
+    "description": "Start Kali Linux Distrobox container for security research",
+    "keywords": ["lab", "kali", "distrobox", "container", "pentest", "research"],
+    "action": "ipc:start_lab",
+    "icon": "utilities-terminal"
+  },
+  {
+    "name": "Stop Lab",
+    "description": "Stop all running lab containers",
+    "keywords": ["lab", "stop", "distrobox", "container", "exit"],
+    "action": "ipc:stop_lab",
+    "icon": "utilities-terminal"
+  },
+  {
+    "name": "System Mode: Normal",
+    "description": "Switch to normal workstation mode",
+    "keywords": ["mode", "normal", "workstation", "transition"],
+    "action": "shell:curl -s -X POST -H 'X-Confirm-Token: cli' --unix-socket /run/user/1000/hisnos-dashboard.sock http://localhost/api/system/mode -d '{\"mode\":\"normal\"}'",
+    "icon": "computer"
+  },
+  {
+    "name": "System Mode: Safe",
+    "description": "Enter safe mode (vault locked, strict firewall)",
+    "keywords": ["mode", "safe", "safemode", "lockdown", "emergency"],
+    "action": "shell:curl -s -X POST -H 'X-Confirm-Token: cli' --unix-socket /run/user/1000/hisnos-dashboard.sock http://localhost/api/system/mode -d '{\"mode\":\"safe_mode\"}'",
+    "icon": "security-high"
+  },
+  {
+    "name": "Check Threat Status",
+    "description": "Show current risk score and active threat signals",
+    "keywords": ["threat", "risk", "score", "signals", "security", "status"],
+    "action": "shell:cat /var/lib/hisnos/threat-state.json | python3 -m json.tool",
+    "icon": "dialog-warning"
+  },
+  {
+    "name": "Open Dashboard",
+    "description": "Open the HisnOS governance dashboard in browser",
+    "keywords": ["dashboard", "ui", "web", "browser", "control"],
+    "action": "shell:xdg-open https://localhost:9443",
+    "icon": "internet-web-browser"
+  },
+  {
+    "name": "View Audit Log",
+    "description": "Show recent audit events from the audit pipeline",
+    "keywords": ["audit", "log", "events", "history", "journal"],
+    "action": "shell:tail -50 /var/log/hisnos/audit/current.jsonl | python3 -m json.tool",
+    "icon": "text-x-log"
+  },
+  {
+    "name": "View Threat Timeline",
+    "description": "Show recent threat scoring events",
+    "keywords": ["threat", "timeline", "history", "events", "risk"],
+    "action": "shell:tail -20 /var/log/hisnos/threat/threat-timeline.jsonl | python3 -m json.tool",
+    "icon": "dialog-warning"
+  },
+  {
+    "name": "Run Stress Tests",
+    "description": "Run all HisnOS validation stress test suites",
+    "keywords": ["stress", "test", "validate", "check", "health"],
+    "action": "shell:bash /etc/hisnos/tests/stress/run-all.sh",
+    "icon": "system-run"
+  },
+  {
+    "name": "Update Firewall CIDRs",
+    "description": "Refresh IP allowlists for egress firewall rules",
+    "keywords": ["firewall", "update", "cidrs", "allowlist", "ip", "egress"],
+    "action": "shell:bash /etc/hisnos/egress/allowlists/update-cidrs.sh",
+    "icon": "network-wired"
+  },
+  {
+    "name": "Vault Status",
+    "description": "Check vault mount state and idle timer",
+    "keywords": ["vault", "status", "mounted", "timer", "idle"],
+    "action": "shell:bash /etc/hisnos/vault/hisnos-vault.sh check",
+    "icon": "drive-harddisk"
+  },
+  {
+    "name": "Rotate Vault Key",
+    "description": "Rotate gocryptfs master key (vault must be mounted)",
+    "keywords": ["vault", "rotate", "key", "master", "passphrase"],
+    "action": "shell:bash /etc/hisnos/vault/hisnos-vault.sh rotate-key",
+    "icon": "security-high"
+  },
+  {
+    "name": "hisnosd Health",
+    "description": "Check hisnosd daemon health and connected subsystems",
+    "keywords": ["hisnosd", "daemon", "health", "status", "core"],
+    "action": "ipc:health",
+    "icon": "system-monitor"
+  },
+  {
+    "name": "Firewall Status",
+    "description": "Check nftables hisnos_egress table and rule count",
+    "keywords": ["firewall", "status", "nftables", "egress", "rules"],
+    "action": "shell:nft list table inet hisnos_egress 2>/dev/null | head -40",
+    "icon": "network-firewall"
+  },
+  {
+    "name": "Open Terminal",
+    "description": "Launch Konsole terminal emulator",
+    "keywords": ["terminal", "konsole", "shell", "bash", "zsh"],
+    "action": "shell:konsole &",
+    "icon": "utilities-terminal"
+  }
+]

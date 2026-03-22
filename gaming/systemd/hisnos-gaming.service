@@ -1,0 +1,28 @@
+[Unit]
+Description=HisnOS Gaming Mode Orchestrator
+Documentation=https://github.com/hisnos/hisnos-secure-workstation
+# Only relevant when user session is active.
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/share/hisnos/gaming/hisnos-gaming.sh start
+ExecStop=%h/.local/share/hisnos/gaming/hisnos-gaming.sh stop
+
+# Non-privileged — runs as the user.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+MemoryMax=32M
+CPUQuota=5%
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-gaming
+
+# Do not restart — GameMode manages lifecycle explicitly.
+Restart=no
+
+[Install]
+WantedBy=default.target

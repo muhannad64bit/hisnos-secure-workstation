@@ -1,0 +1,245 @@
+#!/usr/sbin/nft -f
+# hisnos-base.nft — HisnOS core nftables ruleset
+#
+# Architecture:
+#   Layer 1 (this file)  — kernel-level default-deny + structural chains
+#   Layer 2              — hisnos-updates.nft: CIDR set population (Fedora, Flatpak)
+#   Layer 3              — hisnos-gaming.nft: gaming_temp chain population by GameMode
+#   Layer 4              — OpenSnitch (userspace): per-app prompts via NFQUEUE
+#
+# Load order (managed by bootstrap/post-install.sh):
+#   nft -f hisnos-base.nft       # creates table, chains, empty sets
+#   nft -f hisnos-updates.nft    # populates update CIDR sets
+#   nft -f hisnos-gaming.nft     # defines gaming chain skeleton
+#
+# OpenSnitch interaction:
+#   Unmatched outbound traffic jumps to the opensnitch_out chain, which sends
+#   packets to OpenSnitch's NFQUEUE (queue 0-3). Without bypass — fail-closed:
+#   if OpenSnitch daemon is not running, unmatched outbound is dropped.
+#   TRADEOFF: OpenSnitch must be running for general web/app traffic to flow.
+#   Kernel-level allowlists (DNS, NTP, Fedora mirrors) work without OpenSnitch.
+#
+# Lab network interaction:
+#   KVM/libvirt bridge interfaces (virbr-isolated, virbr-nat) are handled in
+#   the lab_forward chain. HisnOS controls inter-zone routing; libvirt's own
+#   nftables rules handle DHCP/DNS for guests (do not conflict — different tables).
+#
+# To reload:     sudo nft -f /etc/nftables/hisnos-base.nft
+# To verify:     sudo nft list ruleset
+# To flush:      sudo nft delete table inet hisnos
+
+# Flush this table only (leave other tables, e.g. libvirt's, intact)
+table inet hisnos
+delete table inet hisnos
+
+table inet hisnos {
+
+    # ── Named sets (populated by hisnos-updates.nft) ─────────────────────────
+    # These are declared here so chains can reference them before population.
+
+    # Fedora infrastructure: rpm-ostree updates, dnf (in toolbox), Bodhi
+    set fedora_update_cidrs {
+        type ipv4_addr
+        flags interval
+        # Elements populated by hisnos-updates.nft
+    }
+
+    set fedora_update_cidrs6 {
+        type ipv6_addr
+        flags interval
+    }
+
+    # Flatpak repository CDN (Flathub + GNOME Flatpak)
+    set flatpak_cidrs {
+        type ipv4_addr
+        flags interval
+    }
+
+    # Steam game downloads (Valve-owned ASN ranges, relatively stable)
+    # Populated by hisnos-gaming.nft via GameMode hooks at runtime
+    set steam_cidrs {
+        type ipv4_addr
+        flags interval
+    }
+
+    # ── INPUT chain ──────────────────────────────────────────────────────────
+    # Workstation posture: restrictive inbound (no services exposed by default)
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        # Loopback — always accept
+        iif lo accept comment "loopback"
+
+        # Established/related — accept return traffic for outbound connections
+        ct state established,related accept comment "established"
+
+        # Drop invalid conntrack state early
+        ct state invalid drop comment "invalid conntrack"
+
+        # ICMPv4: allow echo-request (ping response) and unreachable for path MTU
+        icmp type { echo-reply, destination-unreachable, time-exceeded } accept
+        # ICMPv6: required for IPv6 operation (NDP, MLD)
+        icmpv6 type {
+            nd-neighbor-solicit, nd-neighbor-advert,
+            nd-router-advert, nd-router-solicit,
+            mld-listener-query, mld-listener-report,
+            echo-reply, destination-unreachable
+        } accept
+
+        # Unmatched inbound → rate-limited log then drop
+        jump log_in_drop
+    }
+
+    # ── OUTPUT chain ─────────────────────────────────────────────────────────
+    # Default-deny outbound. Allowlists are strict and minimal.
+    # Any traffic not matched here goes to opensnitch_out (NFQUEUE).
+    chain output {
+        type filter hook output priority filter; policy drop;
+
+        # Loopback — always allow
+        oif lo accept comment "loopback"
+
+        # Established/related — allow return traffic (e.g. DNS replies handled here)
+        ct state established,related accept comment "established"
+
+        # Drop invalid
+        ct state invalid drop comment "invalid conntrack"
+
+        # ICMPv4 outbound (ping, path MTU)
+        icmp type { echo-request, destination-unreachable } accept
+
+        # ICMPv6 outbound (NDP, MLD, ping)
+        icmpv6 type {
+            nd-neighbor-solicit, nd-neighbor-advert,
+            nd-router-solicit, echo-request,
+            destination-unreachable
+        } accept
+
+        # DNS — ONLY to systemd-resolved stub listener (127.0.0.53)
+        # Prevents DNS bypass to external resolvers directly.
+        # systemd-resolved handles upstream DNS (optionally DoT/DoH).
+        # TRADEOFF: direct DNS to router/external resolvers is blocked.
+        # If systemd-resolved is misconfigured, DNS fails — check resolved.conf.
+        ip daddr 127.0.0.53 udp dport 53 accept comment "dns-stub-udp"
+        ip daddr 127.0.0.53 tcp dport 53 accept comment "dns-stub-tcp"
+        # Also allow to localhost:53 (for local dnsmasq if ever deployed)
+        ip daddr 127.0.0.1 udp dport 53 accept comment "dns-local-udp"
+
+        # NTP — allow to any NTP server (UDP 123)
+        # systemd-timesyncd uses this; restricting to specific NTP servers
+        # adds maintenance burden for minimal security gain on a workstation.
+        udp dport 123 accept comment "ntp"
+
+        # Fedora infrastructure (rpm-ostree updates, subscription services)
+        # CIDRs populated by hisnos-updates.nft
+        ip daddr @fedora_update_cidrs tcp dport { 80, 443 } accept comment "fedora-updates"
+        ip6 daddr @fedora_update_cidrs6 tcp dport { 80, 443 } accept comment "fedora-updates-v6"
+
+        # Flatpak CDN (Flathub)
+        ip daddr @flatpak_cidrs tcp dport 443 accept comment "flatpak"
+
+        # KVM guest traffic leaving via host (NAT lab profile)
+        # The virbr-nat bridge masquerades; this allows the masqueraded packets out.
+        # virbr-isolated traffic never reaches this chain (no routing).
+        oif "virbr-nat" accept comment "lab-nat-outbound"
+
+        # Gaming network profile (empty at boot, populated by GameMode)
+        jump gaming_temp comment "gaming-profile"
+
+        # All other outbound → OpenSnitch NFQUEUE
+        # queue num 0-3: OpenSnitch default queue range
+        # WITHOUT 'bypass': fail-closed — drops if OpenSnitch is not running
+        # This is intentional: security > convenience.
+        # To allow traffic without OpenSnitch: add explicit rules above this line.
+        jump opensnitch_out comment "opensnitch-intercept"
+
+        # Unmatched outbound → rate-limited log then drop
+        jump log_out_drop
+    }
+
+    # ── FORWARD chain ─────────────────────────────────────────────────────────
+    # Controls inter-zone routing for lab VMs.
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+
+        # Established/related (return traffic for VM connections)
+        ct state established,related accept comment "established"
+        ct state invalid drop
+
+        # Lab zone routing (handled by lab_forward chain)
+        jump lab_forward
+
+        # Unmatched forward → rate-limited log then drop
+        jump log_fwd_drop
+    }
+
+    # ── Lab forward chain ─────────────────────────────────────────────────────
+    # Populated by lab/hisnos-lab.sh when lab mode is activated.
+    # Rules are flushed when lab is stopped.
+    chain lab_forward {
+        # isolated profile: guest ↔ guest on bridge only, no host exit
+        # iif "virbr-isolated" oif "virbr-isolated" accept  (added dynamically)
+
+        # nat profile: guest → internet via host NAT (monitored by OpenSnitch)
+        # iif "virbr-nat" oif <uplink> accept  (added dynamically by hisnos-lab.sh)
+
+        # Default: drop all inter-zone traffic until lab is explicitly started
+    }
+
+    # ── OpenSnitch intercept chain ─────────────────────────────────────────────
+    # Sends unmatched outbound packets to OpenSnitch's NFQUEUE.
+    # OpenSnitch listens on queues 0-3 and applies per-app rules.
+    # fail-closed: no 'bypass' keyword — packets are dropped if queue has no listener.
+    chain opensnitch_out {
+        queue num 0-3 comment "opensnitch-nfqueue-fail-closed"
+    }
+
+    # ── Gaming temporary chain ────────────────────────────────────────────────
+    # Empty at boot. GameMode hooks populate this via hisnos-gaming.nft.
+    # Flushed when GameMode exits.
+    # Contents at gaming time: Steam CDN CIDRs, game-specific ports.
+    chain gaming_temp {
+        # Rules added dynamically by:
+        #   config/gamemode.ini → script.start = hisnos-gaming-start.sh
+        #   config/gamemode.ini → script.end   = hisnos-gaming-stop.sh
+    }
+
+    # ── Postrouting (NAT for lab VMs) ─────────────────────────────────────────
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        # NAT masquerade for virbr-nat guests leaving via host uplink
+        # Uplink interface populated by hisnos-lab.sh at lab start time
+        # Example: ip saddr 10.13.38.0/24 oif "enp3s0" masquerade
+    }
+
+    # ── Logging chains ────────────────────────────────────────────────────────
+    # Rate-limited: 5 packets/min burst 10. Prevents log flooding from scans
+    # or misconfigured apps. Each chain logs with a unique prefix then drops.
+    #
+    # Query logs:
+    #   journalctl -k -g "HISNOS-OUT-DROP"     # blocked outbound
+    #   journalctl -k -g "HISNOS-IN-DROP"      # blocked inbound
+    #   journalctl -k -g "HISNOS-FWD-DROP"     # blocked VM forwarding
+    #   journalctl -k -g "HISNOS-" --since -1h # all firewall events last hour
+    #
+    # Log fields (flags all): in/out interface, src/dst IP, protocol, ports.
+    # Useful for diagnosing blocked apps before adding OpenSnitch rules.
+
+    chain log_out_drop {
+        limit rate 5/minute burst 10 packets \
+            log prefix "HISNOS-OUT-DROP: " flags all
+        drop
+    }
+
+    chain log_in_drop {
+        limit rate 5/minute burst 10 packets \
+            log prefix "HISNOS-IN-DROP: " flags all
+        drop
+    }
+
+    chain log_fwd_drop {
+        limit rate 5/minute burst 10 packets \
+            log prefix "HISNOS-FWD-DROP: " flags all
+        drop
+    }
+}

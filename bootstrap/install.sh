@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# bootstrap/install.sh — HisnOS Secure Workstation Phase 1 bootstrap
+#
+# Idempotent: safe to run multiple times. Each step checks before acting.
+# Target: Fedora Kinoite (immutable, rpm-ostree based)
+# Run as: regular user (sudo used only where required)
+#
+# Phase 1 scope:
+#   - Validate environment (Kinoite, x86_64)
+#   - Create project directory structure under $HOME
+#   - Install zram-generator and deploy HisnOS zram config
+#   - Stage rpm-ostree overlays needed for subsequent phases
+#   - Print next-step instructions
+
+set -euo pipefail
+
+# ── Config ────────────────────────────────────────────────────────────────────
+HISNOS_HOME="${HOME}/.local/share/hisnos"
+HISNOS_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Packages to overlay via rpm-ostree (installed into the immutable base)
+# These are needed across multiple phases and should be overlaid once.
+OSTREE_PACKAGES=(
+    gocryptfs          # Phase 3: vault encryption
+    zram-generator     # Phase 1: memory compression
+)
+
+# ── Colour output ─────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
+info()    { echo -e "${GREEN}[hisnos]${NC} $*"; }
+warn()    { echo -e "${YELLOW}[hisnos WARN]${NC} $*"; }
+error()   { echo -e "${RED}[hisnos ERROR]${NC} $*" >&2; exit 1; }
+section() { echo -e "\n${BOLD}══ $* ══${NC}"; }
+
+# ── Step tracking (idempotent helper) ─────────────────────────────────────────
+STEP_LOG="${HISNOS_HOME}/install-steps.log"
+step_done() {
+    [[ -f "${STEP_LOG}" ]] && grep -qx "$1" "${STEP_LOG}" 2>/dev/null
+}
+mark_done() {
+    mkdir -p "${HISNOS_HOME}"
+    grep -qx "$1" "${STEP_LOG}" 2>/dev/null || echo "$1" >> "${STEP_LOG}"
+}
+
+# ── Phase 0: Environment validation ──────────────────────────────────────────
+section "Environment validation"
+
+# Check we're on x86_64
+[[ "$(uname -m)" == "x86_64" ]] || error "HisnOS requires x86_64. Detected: $(uname -m)"
+
+# Check rpm-ostree is available (confirms Kinoite/Silverblue/etc)
+if ! command -v rpm-ostree &>/dev/null; then
+    error "rpm-ostree not found. HisnOS requires Fedora Kinoite (or other ostree-based OS)."
+fi
+
+# Check we are NOT running as root
+[[ "${EUID}" -ne 0 ]] || error "Do not run as root. Run as your regular user; sudo is used internally."
+
+info "Environment: OK (Fedora ostree, x86_64, user: ${USER})"
+
+# ── Phase 1a: Directory structure ─────────────────────────────────────────────
+section "Creating HisnOS runtime directories"
+
+if ! step_done "dirs-created"; then
+    mkdir -p \
+        "${HISNOS_HOME}/vault-cipher" \
+        "${HISNOS_HOME}/vault-mount" \
+        "${HISNOS_HOME}/logs" \
+        "${HISNOS_HOME}/run"
+    mark_done "dirs-created"
+    info "Runtime directories created under ${HISNOS_HOME}"
+else
+    info "Directories already exist — skipped"
+fi
+
+# Ensure vault-mount and vault-cipher have tight permissions
+chmod 700 "${HISNOS_HOME}/vault-cipher" "${HISNOS_HOME}/vault-mount"
+
+# ── Phase 1b: rpm-ostree package overlays ─────────────────────────────────────
+section "rpm-ostree package overlays"
+
+# Build list of packages not yet installed
+TO_INSTALL=()
+for pkg in "${OSTREE_PACKAGES[@]}"; do
+    if rpm -q "${pkg}" &>/dev/null; then
+        info "${pkg}: already installed"
+    else
+        TO_INSTALL+=("${pkg}")
+    fi
+done
+
+if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
+    info "Overlaying packages: ${TO_INSTALL[*]}"
+    warn "This will stage a new deployment. A reboot is required after this step."
+    rpm-ostree install --idempotent "${TO_INSTALL[@]}"
+    mark_done "ostree-overlay-staged"
+    warn "Packages staged. Reboot to activate, then re-run this script."
+    echo ""
+    echo "  sudo systemctl reboot"
+    echo ""
+    # Exit here — subsequent steps require the packages to be active
+    exit 0
+else
+    info "All packages already overlaid — no reboot needed"
+fi
+
+# ── Phase 1c: zram configuration ─────────────────────────────────────────────
+section "zram configuration"
+
+ZRAM_CONF="/etc/systemd/zram-generator.conf"
+
+if ! step_done "zram-configured"; then
+    # Detect total RAM to size zram appropriately
+    TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    TOTAL_RAM_GB=$(( TOTAL_RAM_KB / 1024 / 1024 ))
+
+    # zram size strategy:
+    #   <= 8GB RAM  → zram = 100% RAM (max effective gain with zstd)
+    #   <= 16GB RAM → zram = 75% RAM
+    #   >  16GB RAM → zram = 50% RAM (diminishing returns above this)
+    if [[ ${TOTAL_RAM_GB} -le 8 ]]; then
+        ZRAM_SIZE="ram"       # 100% of RAM
+    elif [[ ${TOTAL_RAM_GB} -le 16 ]]; then
+        ZRAM_SIZE="8192"      # 8GB fixed
+    else
+        ZRAM_SIZE="16384"     # 16GB fixed
+    fi
+
+    info "RAM: ${TOTAL_RAM_GB}GB detected → zram size: ${ZRAM_SIZE}"
+
+    # Write zram-generator config to /etc (survives ostree updates)
+    sudo tee "${ZRAM_CONF}" > /dev/null <<EOF
+# HisnOS zram configuration
+# Generated by bootstrap/install.sh
+# Algorithm: zstd (~2.5x compression ratio typical for mixed workloads)
+# Streams: one per CPU thread for parallelism
+
+[zram0]
+zram-size = ${ZRAM_SIZE}
+compression-algorithm = zstd
+swap-priority = 100
+EOF
+
+    mark_done "zram-configured"
+    info "zram config written to ${ZRAM_CONF}"
+else
+    info "zram already configured — skipped"
+fi
+
+# ── Phase 1d: Activate zram ───────────────────────────────────────────────────
+section "zram activation"
+
+if ! step_done "zram-active"; then
+    if systemctl is-active --quiet systemd-zram-setup@zram0.service 2>/dev/null; then
+        info "zram0 already active"
+    else
+        info "Activating zram..."
+        sudo systemctl start systemd-zram-setup@zram0.service
+        # Enable for next boot (zram-generator handles this automatically,
+        # but explicit enable avoids confusion)
+        sudo systemctl enable systemd-zram-setup@zram0.service 2>/dev/null || true
+    fi
+    mark_done "zram-active"
+fi
+
+# Verify zram is active
+if swapon --show | grep -q zram; then
+    info "zram swap active: $(swapon --show | grep zram | awk '{print $1, $3}')"
+else
+    warn "zram0 may not be active yet. Check: swapon --show"
+fi
+
+# ── Phase 1e: Record install state ───────────────────────────────────────────
+section "Recording install state"
+INSTALL_RECORD="${HISNOS_HOME}/logs/phase1-install-$(date +%Y%m%d-%H%M%S).log"
+{
+    echo "HisnOS Phase 1 bootstrap completed"
+    echo "Date: $(date -Iseconds)"
+    echo "Host: $(hostname)"
+    echo "OS: $(rpm-ostree status --booted 2>/dev/null | head -3 || echo 'unknown')"
+    echo "Kernel: $(uname -r)"
+    echo "RAM: ${TOTAL_RAM_GB:-unknown}GB"
+    echo "zram config: ${ZRAM_CONF}"
+} > "${INSTALL_RECORD}"
+
+info "Phase 1 complete. Record: ${INSTALL_RECORD}"
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${BOLD}HisnOS Phase 1 — Complete${NC}"
+echo ""
+echo "  Installed:  zram-generator (zstd compression)"
+echo "  Overlaid:   gocryptfs (vault, used in Phase 3)"
+echo "  Dirs:       ${HISNOS_HOME}/{vault-cipher,vault-mount,logs,run}"
+echo ""
+echo "  Verify zram:  swapon --show"
+echo "  Verify pkgs:  rpm -q gocryptfs zram-generator"
+echo ""
+echo "  Next phase:   bootstrap/post-install.sh (after reboot if overlays were staged)"
+echo "  Phase 2:      egress/nftables/ — default-deny firewall"

@@ -1,0 +1,52 @@
+# lab/systemd/hisnos-lab-netd@.service — HisnOS lab network setup daemon (per-connection)
+#
+# Socket-activated via hisnos-lab-netd.socket (Accept=yes).
+# Each connection spawns one instance; exits after processing one request.
+#
+# Privilege model:
+#   - Runs as root (needed for ip link, nft, nsenter)
+#   - CapabilityBoundingSet restricted to CAP_NET_ADMIN only
+#   - NoNewPrivileges prevents further escalation
+#   - PrivateNetwork=no: must reach host network namespace for veth operations
+#   - PrivateTmp=yes: prevents temp file collisions
+#   - RuntimeDirectory=hisnos: ensures /run/hisnos/ exists for socket
+#
+# Install: sudo cp lab/systemd/hisnos-lab-netd@.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+
+[Unit]
+Description=HisnOS Lab Network Setup Daemon (connection %i)
+Requires=hisnos-lab-netd.socket
+After=hisnos-lab-netd.socket
+
+[Service]
+Type=simple
+User=root
+
+ExecStart=/etc/hisnos/lab/netd/hisnos-lab-netd.sh
+
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+
+# Privilege reduction: only CAP_NET_ADMIN is needed for ip/nft/nsenter
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_PTRACE
+AmbientCapabilities=CAP_NET_ADMIN CAP_SYS_PTRACE
+NoNewPrivileges=yes
+
+# Filesystem isolation
+PrivateTmp=yes
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/run/hisnos /proc/sys/net/ipv4
+
+# Timeout: network setup should complete within 15s
+TimeoutStartSec=15
+TimeoutStopSec=5
+
+# No restart — ephemeral per-connection service
+Restart=no
+
+# cgroup limits: netd is short-lived, minimal resource usage
+CPUQuota=10%
+MemoryMax=64M

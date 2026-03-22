@@ -1,0 +1,56 @@
+// /etc/polkit-1/rules.d/10-hisnos-gaming.rules
+// HisnOS Gaming Mode — Polkit Authorization Rules
+//
+// Allows members of the 'hisnos-gaming' group to start and stop the
+// privileged gaming tuning services without a password prompt.
+//
+// Services authorized:
+//   hisnos-gaming-tuned-start.service — activates CPU/IRQ/nftables gaming profile
+//   hisnos-gaming-tuned-stop.service  — restores normal system profile
+//
+// Security rationale:
+//   These services run as root but are strictly capability-bounded
+//   (CAP_NET_ADMIN, CAP_SYS_NICE, CAP_SYS_RAWIO only) with NoNewPrivileges=yes.
+//   The polkit rule is scoped to the two specific service units — no broader
+//   systemd unit management is granted.
+//
+// Install to: /etc/polkit-1/rules.d/10-hisnos-gaming.rules
+// Reload:     systemctl restart polkit
+//
+// Fedora Kinoite note:
+//   This file must be placed in /etc/polkit-1/rules.d/ (not /usr/)
+//   since /usr is immutable. The bootstrap installer copies it there.
+
+polkit.addRule(function(action, subject) {
+    // Only match systemd unit management actions.
+    if (action.id !== "org.freedesktop.systemd1.manage-units") {
+        return polkit.Result.NOT_HANDLED;
+    }
+
+    var unit = action.lookup("unit");
+    var verb = action.lookup("verb");
+
+    // Only authorize start/restart/stop on the two scoped gaming units.
+    var allowedUnits = [
+        "hisnos-gaming-tuned-start.service",
+        "hisnos-gaming-tuned-stop.service"
+    ];
+    var allowedVerbs = ["start", "stop", "restart"];
+
+    var unitAllowed = false;
+    for (var i = 0; i < allowedUnits.length; i++) {
+        if (unit === allowedUnits[i]) { unitAllowed = true; break; }
+    }
+    var verbAllowed = false;
+    for (var i = 0; i < allowedVerbs.length; i++) {
+        if (verb === allowedVerbs[i]) { verbAllowed = true; break; }
+    }
+
+    if (unitAllowed && verbAllowed && subject.isInGroup("hisnos-gaming")) {
+        polkit.log("hisnos-gaming: authorized " + verb + " for " + unit +
+                   " by user " + subject.user);
+        return polkit.Result.YES;
+    }
+
+    return polkit.Result.NOT_HANDLED;
+});

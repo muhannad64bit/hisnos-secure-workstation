@@ -1,0 +1,36 @@
+# update/systemd/hisnos-update-check.timer — HisnOS weekly update availability check
+#
+# Runs a non-downloading update check once per week in the background.
+# Result is written to /var/lib/hisnos/update-state for dashboard consumption.
+#
+# This timer intentionally does NOT auto-download or auto-apply updates.
+# Update application always requires explicit user confirmation via:
+#   hisnos-update prepare && hisnos-update apply
+#   (or the dashboard "Update System" button)
+#
+# Install (user service):
+#   cp update/systemd/hisnos-update-check.timer ~/.config/systemd/user/
+#   cp update/systemd/hisnos-update-check.service ~/.config/systemd/user/
+#   systemctl --user enable --now hisnos-update-check.timer
+#
+# To trigger an immediate check (without waiting for the timer):
+#   systemctl --user start hisnos-update-check.service
+
+[Unit]
+Description=HisnOS weekly update availability check
+Documentation=https://github.com/hisnos/secure-workstation
+
+[Timer]
+# First check: 10 minutes after boot (allow system to settle)
+OnBootSec=10min
+# Recurring: once per week
+OnCalendar=weekly
+# Randomize start within a 2-hour window to avoid thundering herd
+RandomizedDelaySec=2h
+# Persist timer across missed activations (e.g., powered off during scheduled time)
+Persistent=true
+# Timer accuracy: within 15 minutes (battery-friendly)
+AccuracySec=15min
+
+[Install]
+WantedBy=timers.target

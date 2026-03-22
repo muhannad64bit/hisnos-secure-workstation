@@ -1,0 +1,43 @@
+[Unit]
+Description=HisnOS Command Center UI (persistent search overlay)
+Documentation=file://%h/.local/share/hisnos/docs/
+# The UI connects to searchd on first search — soft dependency only.
+After=hisnos-searchd.service graphical-session.target
+Wants=hisnos-searchd.service
+
+[Service]
+Type=simple
+# The UI stays running in the background (hidden). Show/hide via control socket.
+ExecStart=%h/.local/share/hisnos/bin/hisnos-search-ui
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Environment — Wayland + KDE Plasma 6
+Environment=HOME=%h
+Environment=QT_QPA_PLATFORM=wayland
+# Fallback to xcb if Wayland compositor not available.
+Environment=QT_QPA_PLATFORM_PLUGIN_PATH=/usr/lib64/qt6/plugins/platforms
+Environment=WAYLAND_DISPLAY=%t/wayland-0
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=%t
+Environment=XDG_SESSION_TYPE=wayland
+
+# Security — UI is display-facing, keep hardening minimal but present.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+# Resource limits — PySide6 UI is steady-state light after startup.
+MemoryMax=200M
+CPUQuota=5%
+TasksMax=24
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-search-ui
+
+[Install]
+# Start with the graphical session (KDE Plasma autostart equivalent).
+WantedBy=graphical-session.target

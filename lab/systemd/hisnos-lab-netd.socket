@@ -1,0 +1,32 @@
+# lab/systemd/hisnos-lab-netd.socket — HisnOS lab network setup daemon socket
+#
+# Accept=yes: each connection spawns a new hisnos-lab-netd@.service instance.
+# The socket is mode 0660 with group hisnos-lab so only group members can
+# connect — the dashboard user service must be in group hisnos-lab.
+#
+# bootstrap-installer.sh must:
+#   groupadd -r hisnos-lab
+#   usermod -aG hisnos-lab <user>
+#   install -d -m 0750 -o root -g hisnos-lab /etc/hisnos/lab/netd/
+#   cp hisnos-lab-netd.sh hisnos-lab-dns-sinkhole.py /etc/hisnos/lab/netd/
+#   chmod 750 /etc/hisnos/lab/netd/hisnos-lab-netd.sh
+#
+# Install: sudo cp lab/systemd/hisnos-lab-netd.socket /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now hisnos-lab-netd.socket
+
+[Unit]
+Description=HisnOS Lab Network Setup Daemon Socket
+Documentation=file:///etc/hisnos/lab/netd/hisnos-lab-netd.sh
+
+[Socket]
+ListenStream=/run/hisnos/lab-netd.sock
+SocketMode=0660
+SocketGroup=hisnos-lab
+Accept=yes
+
+# systemd creates /run/hisnos/ if it does not exist
+RuntimeDirectory=hisnos
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=sockets.target

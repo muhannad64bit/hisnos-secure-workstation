@@ -1,0 +1,166 @@
+#!/usr/sbin/nft -f
+# hisnos-observe.nft — HisnOS firewall OBSERVE (staging) mode
+#
+# PURPOSE: Safe pre-enforcement analysis. Load this BEFORE enforcement to
+# identify what traffic your workstation generates that is NOT in the
+# current allowlists. Run for 24-48 hours in normal use to collect data.
+#
+# BEHAVIOUR:
+#   - All chains have ACCEPT policy (no traffic is blocked)
+#   - Traffic that WOULD be denied in enforcement mode is logged with prefix
+#     "HISNOS-OBS-WOULD-DROP: "
+#   - Traffic passing the allowlists is logged with "HISNOS-OBS-ALLOW: "
+#   - OpenSnitch NFQUEUE is bypassed (bypass keyword = accept if no listener)
+#
+# DIFFERENCE from enforcement (hisnos-base.nft):
+#   - OUTPUT policy: accept  (not drop)
+#   - INPUT  policy: accept  (not drop)
+#   - FORWARD policy: accept (not drop)
+#   - log chains: log-then-ACCEPT (not log-then-drop)
+#   - opensnitch_out: queue bypass (fail-open) so traffic flows without OpenSnitch
+#
+# WORKFLOW:
+#   1. Load: sudo nft -f /etc/nftables/hisnos-observe.nft
+#   2. Use workstation normally for 24-48h
+#   3. Analyse: journalctl -k -g "HISNOS-OBS-WOULD-DROP" --no-pager
+#   4. Add missing CIDRs to allowlist files, re-run update-cidrs.sh
+#   5. Switch to enforcement: sudo egress/hisnos-egress.sh enforce
+#
+# LOAD/UNLOAD:
+#   Load:   sudo nft -f /etc/nftables/hisnos-observe.nft
+#   Status: sudo nft list table inet hisnos | head -5
+#   Unload: sudo nft delete table inet hisnos
+
+table inet hisnos
+delete table inet hisnos
+
+table inet hisnos {
+
+    # Named sets — identical to enforcement mode, populated by hisnos-updates.nft
+    set fedora_update_cidrs {
+        type ipv4_addr
+        flags interval
+    }
+
+    set fedora_update_cidrs6 {
+        type ipv6_addr
+        flags interval
+    }
+
+    set flatpak_cidrs {
+        type ipv4_addr
+        flags interval
+    }
+
+    set steam_cidrs {
+        type ipv4_addr
+        flags interval
+    }
+
+    # ── INPUT — ACCEPT policy (observe mode) ──────────────────────────────────
+    chain input {
+        type filter hook input priority filter; policy accept;
+
+        iif lo accept comment "loopback"
+        ct state established,related accept comment "established"
+        ct state invalid log prefix "HISNOS-OBS-INVALID: " flags all drop
+
+        icmp type { echo-reply, destination-unreachable, time-exceeded } accept
+        icmpv6 type {
+            nd-neighbor-solicit, nd-neighbor-advert,
+            nd-router-advert, nd-router-solicit,
+            mld-listener-query, mld-listener-report,
+            echo-reply, destination-unreachable
+        } accept
+
+        # Log inbound that would be denied in enforcement
+        limit rate 10/minute burst 20 packets \
+            log prefix "HISNOS-OBS-WOULD-DROP-IN: " flags all
+        # ACCEPT (observe mode — do not drop)
+    }
+
+    # ── OUTPUT — ACCEPT policy (observe mode) ─────────────────────────────────
+    chain output {
+        type filter hook output priority filter; policy accept;
+
+        oif lo accept comment "loopback"
+        ct state established,related accept comment "established"
+        ct state invalid drop
+
+        icmp type { echo-request, destination-unreachable } accept
+        icmpv6 type {
+            nd-neighbor-solicit, nd-neighbor-advert,
+            nd-router-solicit, echo-request,
+            destination-unreachable
+        } accept
+
+        # Mirror of enforcement allowlist — log matches as ALLOW for comparison
+        ip daddr 127.0.0.53 udp dport 53 \
+            log prefix "HISNOS-OBS-ALLOW: " flags all accept comment "dns-stub"
+        ip daddr 127.0.0.53 tcp dport 53 \
+            log prefix "HISNOS-OBS-ALLOW: " flags all accept comment "dns-stub"
+        ip daddr 127.0.0.1 udp dport 53 accept comment "dns-local"
+        udp dport 123 \
+            log prefix "HISNOS-OBS-ALLOW: " flags all accept comment "ntp"
+        ip daddr @fedora_update_cidrs tcp dport { 80, 443 } \
+            log prefix "HISNOS-OBS-ALLOW: " flags all accept comment "fedora"
+        ip6 daddr @fedora_update_cidrs6 tcp dport { 80, 443 } accept comment "fedora-v6"
+        ip daddr @flatpak_cidrs tcp dport 443 \
+            log prefix "HISNOS-OBS-ALLOW: " flags all accept comment "flatpak"
+        oif "virbr-nat" accept comment "lab-nat"
+
+        jump gaming_temp
+
+        # Everything that WOULD go to OpenSnitch → log in observe mode
+        # 'bypass' = accept if no listener (fail-open for observe)
+        jump obs_would_queue
+
+        # Final: accept (observe mode)
+    }
+
+    # ── FORWARD — ACCEPT policy (observe mode) ────────────────────────────────
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+
+        ct state established,related accept
+        ct state invalid drop
+
+        jump lab_forward
+
+        # Log would-deny forwards
+        limit rate 5/minute burst 10 packets \
+            log prefix "HISNOS-OBS-WOULD-DROP-FWD: " flags all
+    }
+
+    chain lab_forward {
+        # Same as enforcement — populated dynamically
+    }
+
+    # ── Observe queue chain ───────────────────────────────────────────────────
+    # In enforcement: sends to NFQUEUE (fail-closed)
+    # In observe: logs what would hit OpenSnitch, then accepts
+    chain obs_would_queue {
+        limit rate 10/minute burst 20 packets \
+            log prefix "HISNOS-OBS-WOULD-QUEUE: " flags all
+        # Accept — observe mode does not block
+    }
+
+    chain gaming_temp {
+        # Populated dynamically by GameMode hooks (same as enforcement)
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+    }
+
+    # ── Observe log summary chains ────────────────────────────────────────────
+    # These chains are only present in observe mode and provide structured
+    # logging for analysis. Review with:
+    #   journalctl -k -g "HISNOS-OBS" --no-pager | sort | uniq -c | sort -rn
+    #
+    # Interpretation:
+    #   HISNOS-OBS-ALLOW:            → passes the allowlist (correct)
+    #   HISNOS-OBS-WOULD-QUEUE:      → would go to OpenSnitch (needs OpenSnitch rule)
+    #   HISNOS-OBS-WOULD-DROP-IN:    → inbound that would be blocked
+    #   HISNOS-OBS-WOULD-DROP-FWD:   → forwarding that would be blocked
+}

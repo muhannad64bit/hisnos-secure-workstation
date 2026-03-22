@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+*.log
+*.jsonl
+*.gz
+*.iso
+bin/
+web/dist/
+audit/
+threat/
+var/
+.cache/

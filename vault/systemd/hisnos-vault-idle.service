@@ -1,0 +1,28 @@
+[Unit]
+Description=HisnOS vault idle auto-lock (triggered by idle timer)
+Documentation=file://%h/.local/share/hisnos/vault/hisnos-vault.sh
+# This is a transient one-shot service — triggered by hisnos-vault-idle.timer.
+# It runs vault lock if the vault is mounted; exits 0 whether or not the vault
+# was mounted (idempotent).
+
+[Service]
+Type=oneshot
+
+# Run the vault lock command.
+# vault lock exits 0 even if vault is already locked — no spam in the journal.
+ExecStart=%h/.local/share/hisnos/vault/hisnos-vault.sh lock
+
+# If gocryptfs or fusermount is not available (e.g., before gocryptfs install),
+# continue without failing the timer loop.
+IgnoreReturnCode=false
+
+# Do not restart one-shot timers — the timer handles re-invocation
+Restart=no
+
+# Tight security: same profile as the watcher
+NoNewPrivileges=true
+PrivateTmp=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-vault-idle

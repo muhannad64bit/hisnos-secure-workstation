@@ -1,0 +1,53 @@
+# core/systemd/hisnosd.service — hisnosd user service unit
+#
+# hisnosd is the HisnOS Core Control Runtime.
+# It must start before the dashboard socket so that the IPC socket is
+# available when the dashboard first accepts connections.
+#
+# Install location: ~/.config/systemd/user/hisnosd.service
+
+[Unit]
+Description=HisnOS Core Control Runtime (hisnosd)
+Documentation=file://%h/.local/share/hisnos/docs/ARCHITECTURE-DIAGRAM.md
+After=default.target
+# Start before dashboard so IPC is available at first dashboard connection.
+Before=hisnos-dashboard.socket
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/hisnos/bin/hisnosd
+
+# Environment
+Environment=HISNOS_DIR=%h/.local/share/hisnos
+Environment=HISNOS_STATE_FILE=/var/lib/hisnos/core-state.json
+Environment=HISNOS_THREAT_STATE=/var/lib/hisnos/threat-state.json
+# IPC socket: /run/user/$UID/hisnosd.sock (constructed from $UID in main.go)
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+# hisnosd needs read-write access to:
+#   /var/lib/hisnos/        — core-state.json (write)
+#   /run/user/%i/           — hisnosd.sock (write)
+# And read access to:
+#   /var/lib/hisnos/        — threat-state.json, audit/current.jsonl (read)
+#   /proc/mounts            — vault mount detection (read, always accessible)
+ReadWritePaths=/var/lib/hisnos /run/user/%i
+
+# Resource limits — hisnosd is lightweight; its 15s polling loop uses negligible CPU.
+MemoryMax=128M
+CPUQuota=10%
+
+# Restart policy — hisnosd must survive transient failures.
+Restart=always
+RestartSec=10
+# Allow 5 restarts in 120 seconds before systemd gives up.
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+# Journal tag for log filtering.
+SyslogIdentifier=hisnos-core
+
+[Install]
+WantedBy=default.target

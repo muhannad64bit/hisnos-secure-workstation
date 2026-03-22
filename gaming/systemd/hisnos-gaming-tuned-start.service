@@ -1,0 +1,43 @@
+[Unit]
+Description=HisnOS Gaming Privileged Tuning — Activate
+Documentation=https://github.com/hisnos/hisnos-secure-workstation
+# Conflicts with stop service — only one can be active at a time.
+Conflicts=hisnos-gaming-tuned-stop.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/etc/hisnos/gaming/hisnos-gaming-tuned.sh start
+# On failure, attempt rollback automatically.
+ExecStopPost=/etc/hisnos/gaming/hisnos-gaming-tuned.sh stop
+
+# ── Security ─────────────────────────────────────────────────────────────────
+# Runs as root — strictly scoped capabilities.
+User=root
+NoNewPrivileges=yes
+# CAP_NET_ADMIN: required for nftables rule injection.
+# CAP_SYS_NICE:  required for IRQ affinity writes to /proc/irq/*/smp_affinity_list.
+# CAP_SYS_RAWIO: required for sysfs CPU governor writes on some kernel configs.
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_SYS_NICE CAP_SYS_RAWIO
+AmbientCapabilities=CAP_NET_ADMIN CAP_SYS_NICE CAP_SYS_RAWIO
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+# /run/hisnos/ is needed to store tuning state.
+ReadWritePaths=/run/hisnos /proc/irq /proc/interrupts
+RuntimeDirectory=hisnos
+RuntimeDirectoryMode=0750
+
+# ── Resource limits ───────────────────────────────────────────────────────────
+TimeoutStartSec=30
+TimeoutStopSec=30
+MemoryMax=32M
+CPUQuota=20%
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-gaming-tuned
+
+[Install]
+WantedBy=multi-user.target

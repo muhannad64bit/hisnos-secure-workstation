@@ -1,0 +1,50 @@
+[Unit]
+Description=HisnOS Search Daemon (searchd)
+Documentation=file://%h/.local/share/hisnos/docs/
+# Start after the filesystem is ready and after hisnosd is up (for IPC delegation).
+After=hisnosd.service
+# Do not hard-require hisnosd — searchd degrades gracefully if IPC unavailable.
+Wants=hisnosd.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/hisnos/bin/searchd
+Restart=on-failure
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+# Environment
+Environment=HOME=%h
+Environment=HISNOS_COMMANDS_FILE=%h/.local/share/hisnos/commands.json
+Environment=HISNOS_SNAPSHOT_FILE=%t/hisnos-search-index.json
+Environment=HISNOS_SEARCH_SOCKET=%t/hisnos-search.sock
+# HISNOS_IPC_SOCKET inherits from hisnosd default
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# Must read home for file indexing — bind-mount as read-only.
+BindReadOnlyPaths=%h
+# Must write snapshot to XDG_RUNTIME_DIR and read /proc/mounts.
+ReadWritePaths=%t
+ReadWritePaths=/var/log/hisnos
+# Allow reading audit/threat JSONL logs.
+SupplementaryGroups=systemd-journal
+
+# Resource limits — indexing is I/O heavy at startup but steady-state is light.
+MemoryMax=150M
+CPUQuota=15%
+IOSchedulingClass=best-effort
+IOSchedulingPriority=5
+TasksMax=32
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-searchd
+
+[Install]
+WantedBy=default.target

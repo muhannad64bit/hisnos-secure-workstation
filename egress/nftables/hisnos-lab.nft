@@ -1,0 +1,97 @@
+#!/usr/sbin/nft -f
+# egress/nftables/hisnos-lab.nft — Lab containment profile (Phase 5b)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Architecture
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# PRIMARY containment: bwrap --unshare-net (ALL profiles)
+#   Every session runs in a kernel-isolated network namespace.
+#   Zero host access by default. Hard kernel boundary.
+#
+# SUPPLEMENTAL: veth pair + this file (non-offline profiles only)
+#   allowlist-cidr, dns-sinkhole, http-proxy: veth bridges the namespace
+#   to the host. This file defines the host-side policy.
+#   Veth naming: vlh-XXXXXXXX (host), vlc-XXXXXXXX (container).
+#   Session subnet: 10.72.0.0/30 (host=.1, container=.2).
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Rule lifecycle — ALL rules injected dynamically by hisnos-lab-netd.sh
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# At session START (netd):
+#   nft add set  inet hisnos lab_al_XXXXXXXX { type ipv4_addr; flags interval; }
+#   nft add element inet hisnos lab_al_XXXXXXXX { <cidrs> }
+#   (profile-specific rule injection into lab_forward + input + postrouting)
+#
+# At session STOP (netd, by saved handles — no chain flush):
+#   nft delete rule inet hisnos lab_forward   handle <N>
+#   nft delete rule inet hisnos postrouting   handle <N>
+#   nft delete rule inet hisnos input         handle <N>
+#   nft flush  set  inet hisnos lab_al_XXXXXXXX
+#   nft delete set  inet hisnos lab_al_XXXXXXXX
+#   ip link delete vlh-XXXXXXXX
+#
+# EMERGENCY flush (on crash, by netd emergency-flush op):
+#   ip link delete vlh-*/vlc-*
+#   nft flush chain inet hisnos lab_forward
+#   nft flush chain inet hisnos lab_veth_output
+#   nft flush chain inet hisnos lab_veth_input
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Per-profile policy matrix
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  Profile        | lab_forward rules          | input rules          | postrouting
+#  ────────────── | ─────────────────────────── | ─────────────────── | ──────────
+#  offline        | (no veth — not applicable) | (not applicable)    | (none)
+#  allowlist-cidr | allow @lab_al_SID, drop    | drop all from vlh   | masquerade
+#  dns-sinkhole   | drop all from vlh          | allow :53, drop     | (none)
+#  http-proxy     | allow proxy_ip:port, drop  | drop all from vlh   | masquerade
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Load order
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. nft -f hisnos-base.nft      (creates inet hisnos table + chains)
+# 2. nft -f hisnos-lab.nft       (extends table with lab chains)
+# Dynamic: netd injects per-session rules; teardown removes by handle.
+#
+# To load:    sudo nft -f /etc/nftables/hisnos-lab.nft
+# To verify:  sudo nft list table inet hisnos
+# To query:   journalctl -k -g "HISNOS-LAB"
+
+table inet hisnos {
+
+    # ── lab_veth_output chain ────────────────────────────────────────────────
+    # Host → container traffic (OUTPUT chain → veth host side).
+    # Empty at boot. Per-session rules are injected directly into the parent
+    # OUTPUT/INPUT chains using `iif/oif vlh-XXXXXXXX` interface match rather
+    # than a jump to this chain. Kept for Phase 6+ multi-session expansion.
+    chain lab_veth_output {
+        # DYNAMIC: populated by netd if needed.
+        # Default: fall through to parent chain policy.
+    }
+
+    # ── lab_veth_input chain ─────────────────────────────────────────────────
+    # Container → host traffic (INPUT chain ← veth host side).
+    # Empty at boot. Per-session DROP/DNS-allow rules are injected directly into
+    # the INPUT chain by netd (iif match avoids jump overhead for single-session).
+    chain lab_veth_input {
+        # DYNAMIC: populated by netd at session start.
+    }
+
+    # ── lab_forward chain ────────────────────────────────────────────────────
+    # Container → internet routing (declared in hisnos-base.nft).
+    # ALWAYS empty at boot. Populated per session, deleted per session.
+    # Emergency flush: nft flush chain inet hisnos lab_forward
+    #
+    # Example rules injected by netd for allowlist-cidr profile:
+    #   add rule inet hisnos lab_forward iif "vlh-abc123ab" oif "enp3s0"
+    #       ip daddr @lab_al_abc123ab ct state new,established,related accept  # handle N
+    #   add rule inet hisnos lab_forward iif "vlh-abc123ab" drop               # handle N+1
+    #
+    # Example rules for http-proxy profile:
+    #   add rule inet hisnos lab_forward iif "vlh-abc123ab" oif "enp3s0"
+    #       ip daddr 192.168.1.1 tcp dport 3128 ct state new,established,related accept
+    #   add rule inet hisnos lab_forward iif "vlh-abc123ab" drop
+}

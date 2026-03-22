@@ -1,0 +1,88 @@
+#!/usr/sbin/nft -f
+# hisnos-gaming.nft — HisnOS gaming network profile
+#
+# This file manages the gaming_temp chain lifecycle.
+# It is NOT loaded at boot — it is invoked by GameMode hooks:
+#
+#   START: config/gamemode.ini → script.start = hisnos-gaming-start.sh
+#   STOP:  config/gamemode.ini → script.end   = hisnos-gaming-stop.sh
+#
+# When gaming starts:
+#   1. Steam CDN CIDRs are added to the steam_cidrs set
+#   2. Gaming-specific port rules are added to gaming_temp chain
+#   3. Audit services are paused (GameMode handles this)
+#
+# When gaming stops:
+#   1. gaming_temp chain is flushed
+#   2. steam_cidrs set is cleared
+#   3. Audit services resume
+#
+# Rationale for dynamic gaming chain:
+#   At idle, gaming_temp is empty → zero gaming-related traffic allowed kernel-level
+#   During gaming, Steam CDN + game ports are temporarily opened → minimum necessary
+#   On game exit, all gaming rules are atomically removed → no residual exposure
+#
+# To manually activate gaming profile (without GameMode):
+#   sudo nft -f /etc/nftables/hisnos-gaming.nft
+#
+# To manually deactivate:
+#   sudo nft flush chain inet hisnos gaming_temp
+#   sudo nft flush set inet hisnos steam_cidrs
+
+# ── Steam CDN CIDRs ───────────────────────────────────────────────────────────
+# Valve-owned IP ranges (ASN 32590) — stable, own infrastructure
+# Additional: Akamai CDN for game downloads (less stable, but well-known ranges)
+#
+# Refresh command:  whois -h whois.radb.net -- '-i origin AS32590' | grep ^route:
+add element inet hisnos steam_cidrs {
+    # Valve Corporation — ASN 32590 (registered stable ranges)
+    205.196.6.0/24,     # Valve primary
+    208.64.200.0/22,    # Valve CDN block (200-203)
+    208.64.204.0/22,    # Valve CDN block (204-207)
+    208.64.208.0/22,    # Valve CDN block (208-211)
+    208.78.164.0/22,    # Valve game servers
+
+    # Steam content servers — Akamai CDN (game downloads, patches)
+    # ASN 20940 — large range, restricted to ports 27000-27100 below
+    23.67.0.0/16,
+    23.196.0.0/16,
+
+    # CloudFlare (Steam web/API endpoints)
+    104.16.0.0/13,
+
+    # Amazon CloudFront (some game DLC/asset delivery)
+    13.226.0.0/16
+}
+
+# ── gaming_temp chain rules ───────────────────────────────────────────────────
+# These rules are appended to the gaming_temp chain (declared in hisnos-base.nft).
+# The chain is jumped to from the output chain → these rules take effect immediately.
+
+# Steam CDN: HTTPS for game downloads, updates, and web content
+add rule inet hisnos gaming_temp ip daddr @steam_cidrs tcp dport 443 accept comment "steam-https"
+
+# Steam game servers and matchmaking
+# Port ranges: 27000-27100 UDP/TCP (Valve game server range)
+add rule inet hisnos gaming_temp ip daddr @steam_cidrs \
+    tcp dport 27000-27100 accept comment "steam-gameserver-tcp"
+add rule inet hisnos gaming_temp ip daddr @steam_cidrs \
+    udp dport 27000-27100 accept comment "steam-gameserver-udp"
+
+# Steam remote play and in-home streaming
+# UDP 27031-27036 (in-home streaming, remote play)
+add rule inet hisnos gaming_temp udp dport 27031-27036 accept comment "steam-remote-play"
+
+# Steam voice chat (uses UDP in the game server port range above — covered)
+
+# Proton / DXVK telemetry opt-out: no additional rules needed (OpenSnitch handles)
+
+# Multicast DNS (mDNS) for LAN game discovery — accept to local subnet only
+# Restricted to 224.0.0.251 (mDNS multicast address)
+add rule inet hisnos gaming_temp ip daddr 224.0.0.251 udp dport 5353 accept comment "mdns-gaming"
+
+# Game-specific: common game server ports (Counter-Strike, DotA 2, etc.)
+# These are within the Valve range above — covered by 27000-27100
+
+# NOTE: Game-specific rules for non-Valve games (e.g., Epic, GOG)
+# should be added by OpenSnitch per-application prompts, not here.
+# This chain is intentionally Steam/Valve-focused.

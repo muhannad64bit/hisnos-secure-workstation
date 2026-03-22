@@ -1,0 +1,25 @@
+[Unit]
+Description=HisnOS vault idle auto-lock timer
+Documentation=file://%h/.local/share/hisnos/vault/hisnos-vault.sh
+# Only meaningful while the vault watcher is active; pair with the service unit
+After=hisnos-vault-watcher.service
+
+[Timer]
+# Lock vault after 5 minutes of monotonic idle time
+# This timer is NOT wallclock-based — it uses OnUnitActiveSec which measures
+# time since the associated service (hisnos-vault-idle.service) last ran.
+#
+# The timer fires every 5 minutes unconditionally. The lock service itself
+# is a no-op if the vault is already locked — so this is safe to keep running.
+#
+# To change the idle timeout:
+#   Override with: systemctl --user edit hisnos-vault-idle.timer
+#   Add: [Timer] / OnActiveSec=10min
+OnBootSec=5min
+OnUnitActiveSec=5min
+
+# Accuracy: fire within 30 seconds of the target time (reduces wake-ups)
+AccuracySec=30sec
+
+[Install]
+WantedBy=timers.target

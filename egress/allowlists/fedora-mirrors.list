@@ -1,0 +1,42 @@
+# fedora-mirrors.list — Fedora infrastructure domain list for CIDR resolution
+#
+# Format: one domain per line, comments with #
+# Used by: egress/allowlists/update-cidrs.sh (Phase 2 tooling)
+# Purpose: resolve these domains to CIDRs → populate hisnos-updates.nft
+#
+# These domains represent the outbound destinations for:
+#   - rpm-ostree system updates (Fedora Kinoite base image)
+#   - Fedora package downloads (in toolbox/distrobox)
+#   - Bodhi update notifications
+#   - Koji build artifacts
+#
+# Refresh cadence: monthly, or when rpm-ostree update fails with connection errors
+# Refresh command: sudo egress/allowlists/update-cidrs.sh --target fedora
+#
+# Known CDN: Fastly (151.101.0.0/16) — stable, used as primary static CIDR
+# Known infrastructure: Red Hat / IBM (209.132.0.0/16) — stable
+
+# Primary download mirrors
+dl.fedoraproject.org
+mirrors.fedoraproject.org
+download.fedoraproject.org
+
+# Fedora project infrastructure
+src.fedoraproject.org
+koji.fedoraproject.org
+bodhi.fedoraproject.org
+packager.fedoraproject.org
+pagure.io
+release-monitoring.org
+
+# Fedora Container Registry (used by Kinoite base image pulls)
+registry.fedoraproject.org
+quay.io
+
+# Red Hat Customer Portal (subscription content, if applicable)
+cdn.redhat.com
+subscription.rhsm.redhat.com
+
+# Fedora Copr (third-party builds, e.g. upstream Mesa, GameMode)
+copr.fedorainfracloud.org
+download.copr.fedorainfracloud.org

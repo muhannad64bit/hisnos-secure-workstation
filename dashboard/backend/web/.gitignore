@@ -1,0 +1,4 @@
+# Built frontend assets are copied here by bootstrap-installer.sh before go build.
+# Only the placeholder is committed; real dist/ contents are never committed.
+dist/*
+!dist/.gitkeep
