@@ -1,0 +1,7 @@
+/usr/lib64/llvm21
+/usr/lib64/llvm21/bin
+/usr/lib64/llvm21/include
+/usr/lib64/llvm21/lib64
+/usr/lib64/llvm21/lib64/cmake
+/usr/lib64/llvm21/libexec
+/usr/lib64/llvm21/share

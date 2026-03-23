@@ -1,0 +1,54 @@
+[Unit]
+Description=HisnOS Safe Mode Activator
+Documentation=https://hisnos.dev/docs/safe-mode
+# Run very early — before hisnosd — to gate the system
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+ConditionPathExists=/run/hisnos/safemode-active
+
+[Service]
+MemoryMax=300M
+MemoryHigh=250M
+MemorySwapMax=0
+TasksMax=200
+ManagedOOMSwap=kill
+ManagedOOMMemoryPressure=kill
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=120
+Type=oneshot
+RemainAfterExit=yes
+
+# Log the safe-mode activation reason
+ExecStart=/bin/bash -c '\
+  REASON=/run/hisnos/safemode-reason.json; \
+  if [[ -f "$REASON" ]]; then \
+    logger -t hisnos-safe-mode -p auth.alert "SAFE MODE ACTIVE: $(cat "$REASON")"; \
+    systemd-cat -t hisnos-safe-mode < "$REASON"; \
+  else \
+    logger -t hisnos-safe-mode -p auth.alert "SAFE MODE ACTIVE (reason unknown)"; \
+  fi; \
+  touch /var/lib/hisnos/.safe-mode-active 2>/dev/null || true'
+
+# Disable non-essential services in safe-mode
+# HARDENED: expanded list covers all subsystems that are not recovery-critical.
+ExecStartPost=/bin/bash -c '\
+  for svc in hisnos-hispowerd.service hisnos-dashboard.service \
+             hisnos-gaming.service hisnos-automation.service \
+             hisnos-threat-engine.service \
+             hisnos-fleet-sync.timer hisnos-fleet-sync.service \
+             hisnos-performance-guard.service hisnos-irq-balancer.service \
+             hisnos-thermal.service hisnos-rt-guard.service \
+             hisnos-searchd.service hisnos-search-ui.service \
+             hisnos-perf-post-login.service hisnos-onboarding.service; do \
+    systemctl stop "$svc" 2>/dev/null || true; \
+    systemctl mask --runtime "$svc" 2>/dev/null || true; \
+  done'
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=sysinit.target

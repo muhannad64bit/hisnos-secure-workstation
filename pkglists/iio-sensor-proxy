@@ -1,0 +1,15 @@
+/usr/bin/monitor-sensor
+/usr/lib/.build-id
+/usr/lib/.build-id/ab
+/usr/lib/.build-id/ab/1d03925b7cc86b7d69baaa8f94bc1b90c360c5
+/usr/lib/.build-id/fd
+/usr/lib/.build-id/fd/08f42e3f469b9e5f7c99633be800a6345899b2
+/usr/lib/systemd/system/iio-sensor-proxy.service
+/usr/lib/udev/rules.d/80-iio-sensor-proxy.rules
+/usr/libexec/iio-sensor-proxy
+/usr/share/dbus-1/system.d/net.hadess.SensorProxy.conf
+/usr/share/doc/iio-sensor-proxy
+/usr/share/doc/iio-sensor-proxy/README.md
+/usr/share/licenses/iio-sensor-proxy
+/usr/share/licenses/iio-sensor-proxy/COPYING
+/usr/share/polkit-1/actions/net.hadess.SensorProxy.policy

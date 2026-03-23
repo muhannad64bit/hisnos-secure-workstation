@@ -1,0 +1,15 @@
+/usr/bin/gnome-kiosk
+/usr/lib/.build-id
+/usr/lib/.build-id/1a
+/usr/lib/.build-id/1a/887e7375b9f524689fcf4f53dac4aa3bf31672
+/usr/lib/systemd/user/org.gnome.Kiosk.target
+/usr/lib/systemd/user/org.gnome.Kiosk@wayland.service
+/usr/share/applications/org.gnome.Kiosk.desktop
+/usr/share/dconf/profile/gnomekiosk
+/usr/share/doc/gnome-kiosk
+/usr/share/doc/gnome-kiosk/CONFIG.md
+/usr/share/doc/gnome-kiosk/NEWS
+/usr/share/doc/gnome-kiosk/README.md
+/usr/share/gnome-kiosk/gnomekiosk.dconf.compiled
+/usr/share/licenses/gnome-kiosk
+/usr/share/licenses/gnome-kiosk/COPYING

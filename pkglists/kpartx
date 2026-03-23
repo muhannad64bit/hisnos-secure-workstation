@@ -1,0 +1,13 @@
+/usr/bin/kpartx
+/usr/lib/.build-id
+/usr/lib/.build-id/2c
+/usr/lib/.build-id/2c/3348b88592f9448bdc01e878bd2714147abf20
+/usr/lib/udev/kpartx_id
+/usr/lib/udev/rules.d/11-dm-parts.rules
+/usr/lib/udev/rules.d/66-kpartx.rules
+/usr/lib/udev/rules.d/68-del-part-nodes.rules
+/usr/share/doc/kpartx
+/usr/share/doc/kpartx/README.md
+/usr/share/licenses/kpartx
+/usr/share/licenses/kpartx/GPL-2.0
+/usr/share/man/man8/kpartx.8.gz

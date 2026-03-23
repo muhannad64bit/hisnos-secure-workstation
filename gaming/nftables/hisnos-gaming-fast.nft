@@ -1,0 +1,130 @@
+#!/usr/sbin/nft -f
+# hisnos-gaming-fast.nft — Gaming Firewall Fast Path
+#
+# Loaded by hispowerd during active gaming sessions.
+# Removed by hispowerd on session end or crash (safetyNet).
+#
+# Design:
+#   - Adds table inet hisnos_gaming_fast at hook priority -50
+#     (runs BEFORE inet hisnos_egress at priority 0 = filter)
+#   - Accepts pre-approved gaming traffic WITHOUT traversing logging chains
+#   - All other traffic: RETURN (falls through to normal hisnos_egress)
+#   - Default-deny policy is PRESERVED — hisnos_egress handles unknowns
+#
+# Accepted traffic categories:
+#   1. Steam network (known CIDRs / ports)
+#   2. Game matchmaking / STUN / ICE (UDP high ports)
+#   3. DNS (udp/tcp 53)
+#   4. NTP (udp 123)
+#   5. Loopback
+#
+# This file is idempotent: loading it twice is safe (nft handles table replacement).
+# Unloading: hispowerd runs: nft flush table inet hisnos_gaming_fast
+#                             nft delete table inet hisnos_gaming_fast
+
+table inet hisnos_gaming_fast {
+
+    # ─────────────────────────────────────────────
+    # Named sets for gaming traffic
+    # ─────────────────────────────────────────────
+
+    set steam_ports_tcp {
+        type inet_service
+        flags interval
+        # Steam content servers, game ports, matchmaking
+        elements = {
+            # Steam client ports
+            27015-27036,
+            # Steam web/HTTPS
+            443,
+            # Steam downloads (Valve CDN)
+            80,
+            # Steam Remote Play
+            27037,
+            # Steam Voice
+            3478, 4379, 4380
+        }
+    }
+
+    set steam_ports_udp {
+        type inet_service
+        flags interval
+        elements = {
+            # Steam game server ports
+            27000-27100,
+            # Steam voice / relay
+            3478, 4379, 4380,
+            # Game matchmaking / STUN
+            3074, 3478, 5223,
+            # Common game UDP (Valve Anti-Cheat, game lobbies)
+            27005, 27015, 27020, 27036
+        }
+    }
+
+    set gaming_udp_high {
+        type inet_service
+        flags interval
+        # High UDP ports used by game clients for P2P / STUN / ICE
+        elements = { 49152-65535 }
+    }
+
+    # ─────────────────────────────────────────────
+    # Fast-path egress chain (OUTPUT hook, priority -50)
+    # ─────────────────────────────────────────────
+
+    chain gaming_fast_egress {
+        type filter hook output priority -50; policy accept;
+
+        # Loopback — always fast-accept.
+        oifname "lo" accept
+
+        # DNS — fast-accept to avoid blocking game launcher name resolution.
+        udp dport 53 accept
+        tcp dport 53 accept
+
+        # NTP — clocks matter for anti-cheat.
+        udp dport 123 accept
+
+        # Steam TCP game/content/CDN ports.
+        tcp dport @steam_ports_tcp accept
+
+        # Steam UDP game server communication.
+        udp dport @steam_ports_udp accept
+
+        # High UDP ports (P2P, STUN, ICE, game voice chat).
+        udp dport @gaming_udp_high accept
+
+        # HTTPS — accept (Steam overlay, game APIs, patch downloads).
+        tcp dport 443 accept
+
+        # HTTP — accept (legacy patch servers, some game launchers).
+        tcp dport 80 accept
+
+        # Established / related connections — accept without re-checking.
+        ct state { established, related } accept
+
+        # Everything else: return to hisnos_egress for normal policy.
+        return
+    }
+
+    # ─────────────────────────────────────────────
+    # Fast-path ingress chain (INPUT hook, priority -50)
+    # Only allow solicited gaming responses.
+    # ─────────────────────────────────────────────
+
+    chain gaming_fast_ingress {
+        type filter hook input priority -50; policy accept;
+
+        # Loopback
+        iifname "lo" accept
+
+        # Established / related inbound game traffic.
+        ct state { established, related } accept
+
+        # Steam game server broadcast responses (UDP).
+        udp sport @steam_ports_udp ct state { established, related } accept
+
+        # Everything else: return to normal input policy.
+        return
+    }
+}

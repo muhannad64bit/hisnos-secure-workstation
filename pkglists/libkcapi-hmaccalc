@@ -1,0 +1,6 @@
+/usr/bin/sha1hmac
+/usr/bin/sha224hmac
+/usr/bin/sha256hmac
+/usr/bin/sha384hmac
+/usr/bin/sha512hmac
+/usr/bin/sm3hmac

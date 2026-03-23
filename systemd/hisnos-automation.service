@@ -1,0 +1,59 @@
+[Unit]
+Description=HisnOS Autonomous Security Automation Engine
+Documentation=https://hisnos.dev/docs/automation
+# HARDENED: defer to graphical.target — AI must not run during boot.
+After=graphical.target hisnosd.service hisnos-threat-engine.service
+Requires=hisnosd.service
+ConditionPathExists=/etc/hisnos/release
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+# HARDENED: Type=idle — only start when nothing else needs CPU.
+Type=idle
+ExecStart=/usr/local/bin/hisnosd --module automation-engine
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=45
+TimeoutStopSec=30
+WatchdogSec=180
+StartLimitBurst=3
+StartLimitIntervalSec=120
+
+User=root
+Group=root
+
+# HARDENED: lowest scheduling priority — automation is never urgent.
+Nice=10
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+CPUWeight=10
+
+CPUQuota=5%
+MemoryMax=96M
+MemoryHigh=72M
+TasksMax=24
+
+ReadWritePaths=/var/lib/hisnos /var/log/hisnos /run/hisnos
+ReadOnlyPaths=/proc /sys
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+SystemCallFilter=@system-service @timer
+CapabilityBoundingSet=
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-automation
+
+[Install]
+# HARDENED: only activate after graphical session, not during boot.
+WantedBy=graphical.target

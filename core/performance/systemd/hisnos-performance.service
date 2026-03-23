@@ -1,0 +1,32 @@
+[Unit]
+Description=HisnOS Performance Profile Apply
+Documentation=file:///home/munx64/improtant/HisnOS-Secure-Workstation/docs/ARCHITECTURE-CORE.md
+# Runs after hisnosd is up so the persisted profile from perf-state.json can be re-applied.
+After=hisnosd.service
+BindsTo=hisnosd.service
+# Also depends on gaming mode integration.
+Wants=hisnos-gaming.service
+
+[Service]
+# Type=oneshot: re-applies the last persisted profile on session start.
+# The profile is applied by a small shell wrapper calling the hisnosd IPC.
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/bash -c 'test -S "${XDG_RUNTIME_DIR}/hisnosd.sock" || sleep 5'
+ExecStart=/usr/local/bin/hisnos-perf-apply
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+# sysfs writes require access to /sys — cannot be ProtectSystem=full
+ReadWritePaths=/sys/devices/system/cpu /sys/block /proc/sys/vm /proc/sys/kernel /proc/irq
+ReadWritePaths=/var/lib/hisnos
+
+# Cgroup limits (oneshot — minimal resources)
+MemoryMax=32M
+CPUQuota=10%
+
+[Install]
+WantedBy=graphical-session.target

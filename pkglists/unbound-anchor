@@ -1,0 +1,9 @@
+/etc/sysconfig/unbound
+/etc/unbound/icannbundle.pem
+/usr/bin/unbound-anchor
+/usr/lib/.build-id
+/usr/lib/.build-id/17
+/usr/lib/.build-id/17/eb469f28cf2faeaaf2e3793c5c75da77e3913f
+/usr/lib/systemd/system/unbound-anchor.service
+/usr/lib/systemd/system/unbound-anchor.timer
+/usr/share/man/man8/unbound-anchor.8.gz

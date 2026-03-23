@@ -1,0 +1,5 @@
+/etc/fonts/conf.d/65-0-google-noto-sans-cherokee-vf.conf
+/usr/share/fontconfig/conf.avail/65-0-google-noto-sans-cherokee-vf.conf
+/usr/share/fonts/google-noto-vf
+/usr/share/fonts/google-noto-vf/NotoSansCherokee[wght].ttf
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-cherokee-vf-fonts.metainfo.xml

@@ -1,0 +1,12 @@
+/etc/bindresvport.blacklist
+/etc/netconfig
+/lib64/libtirpc.so.3
+/lib64/libtirpc.so.3.0.0
+/usr/lib/.build-id
+/usr/lib/.build-id/c9
+/usr/lib/.build-id/c9/7cfb133daf986bf708149ec326dca3d86ea623
+/usr/share/doc/libtirpc
+/usr/share/doc/libtirpc/AUTHORS
+/usr/share/doc/libtirpc/ChangeLog
+/usr/share/doc/libtirpc/NEWS
+/usr/share/doc/libtirpc/README

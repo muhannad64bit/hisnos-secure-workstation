@@ -1,0 +1,5 @@
+/etc/profile.d
+/etc/profile.d/nano-default-editor.csh
+/etc/profile.d/nano-default-editor.sh
+/usr/share/fish/vendor_conf.d
+/usr/share/fish/vendor_conf.d/nano-default-editor.fish

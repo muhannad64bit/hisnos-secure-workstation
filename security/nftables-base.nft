@@ -1,0 +1,191 @@
+#!/usr/sbin/nft -f
+# security/nftables-base.nft — HisnOS Base Firewall Policy
+#
+# Default-deny egress with explicit allowlists.
+# Loaded at boot by nftables.service before any user services.
+# Gaming fast-path is added/removed by hispowerd dynamically.
+#
+# Tables:
+#   inet hisnos_filter  — main stateful packet filter (input + forward + output)
+#   inet hisnos_egress  — egress enforcement (output only, default-deny)
+#   inet hisnos_raw     — raw pre-conntrack for performance (optional)
+#
+# Design:
+#   - All new outbound connections require an explicit rule in hisnos_egress
+#   - Established/related connections always allowed (stateful)
+#   - Loopback always allowed
+#   - ICMP always allowed (limited rate)
+#   - DNS (53/udp,tcp) allowed to system resolver (127.0.0.53)
+#   - NTP (123/udp) allowed to system NTP
+#   - DHCP (67,68/udp) allowed
+#   - HTTPS (443) allowed for system updates
+#   - SSH (22) inbound controlled by host policy
+
+flush ruleset
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Table: hisnos_filter — stateful main filter
+# ─────────────────────────────────────────────────────────────────────────────
+table inet hisnos_filter {
+
+    # Conntrack state table (shared with egress)
+    chain prerouting {
+        type filter hook prerouting priority -150;
+        ct state invalid drop
+        ct state established,related accept
+    }
+
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # ── Loopback always allowed ──────────────────────────────────────────
+        iif lo accept
+
+        # ── Established / related ────────────────────────────────────────────
+        ct state established,related accept
+        ct state invalid drop
+
+        # ── ICMP (rate limited) ──────────────────────────────────────────────
+        ip  protocol icmp  limit rate 10/second accept
+        ip6 nexthdr  icmpv6 limit rate 10/second accept
+
+        # ── DHCPv4 client ────────────────────────────────────────────────────
+        udp dport 68 accept
+
+        # ── DHCPv6 client ────────────────────────────────────────────────────
+        udp dport 546 accept
+
+        # ── mDNS (local network discovery) ─────────────────────────────────
+        udp dport 5353 accept
+
+        # ── SSH (controlled — set HISNOS_SSH_ALLOW_CIDR to restrict) ────────
+        # Default: allow from LAN (192.168.0.0/16 and 10.0.0.0/8)
+        tcp dport 22 ip  saddr 192.168.0.0/16 accept
+        tcp dport 22 ip  saddr 10.0.0.0/8     accept
+        tcp dport 22 ip  saddr 172.16.0.0/12  accept
+
+        # ── HisnOS dashboard (loopback only) ─────────────────────────────────
+        tcp dport 7374 iif lo accept
+
+        # ── Lab network interfaces (hisnos-lab-*) ───────────────────────────
+        iifname "hisnos-lab-*" accept
+
+        # ── KVM/QEMU virtual network ──────────────────────────────────────────
+        iifname "virbr*" accept
+
+        # ── Drop and log everything else ─────────────────────────────────────
+        log prefix "[hisnos_filter INPUT DROP] " flags all limit rate 5/second
+        drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+
+        # Allow forwarding for lab/KVM networks
+        iifname "virbr*" accept
+        oifname "virbr*" accept
+        iifname "hisnos-lab-*" accept
+        oifname "hisnos-lab-*" accept
+
+        ct state established,related accept
+
+        log prefix "[hisnos_filter FWD DROP] " limit rate 2/second
+        drop
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+
+        # Block loopback-destined traffic from going out physical interfaces
+        oif != lo ip  daddr 127.0.0.0/8  drop
+        oif != lo ip6 daddr ::1          drop
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Table: hisnos_egress — outbound enforcement (default-deny)
+# ─────────────────────────────────────────────────────────────────────────────
+table inet hisnos_egress {
+
+    # Egress allowlist set (populated by hisnosd orchestrator)
+    set allowed_dests_v4 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+        elements = {
+            # Fedora repos
+            8.43.85.0/24,    # download.fedoraproject.org
+            # Cloudflare DNS
+            1.1.1.1/32,
+            1.0.0.1/32,
+            # Google DNS (fallback)
+            8.8.8.8/32,
+            8.8.4.4/32
+        }
+    }
+
+    set allowed_dests_v6 {
+        type ipv6_addr
+        flags interval
+        auto-merge
+        elements = {
+            2606:4700:4700::1111/128,
+            2606:4700:4700::1001/128
+        }
+    }
+
+    chain egress_out {
+        type filter hook output priority 10; policy drop;
+
+        # ── Loopback always allowed ──────────────────────────────────────────
+        oif lo accept
+
+        # ── Established / related ────────────────────────────────────────────
+        ct state established,related accept
+
+        # ── DNS to systemd-resolved (localhost) ──────────────────────────────
+        ip  daddr 127.0.0.53 udp dport 53 accept
+        ip  daddr 127.0.0.53 tcp dport 53 accept
+
+        # ── NTP ──────────────────────────────────────────────────────────────
+        udp dport 123 accept
+
+        # ── DHCPv4 client ────────────────────────────────────────────────────
+        udp sport 68 udp dport 67 accept
+
+        # ── DHCPv6 client ────────────────────────────────────────────────────
+        udp sport 546 udp dport 547 accept
+
+        # ── mDNS ─────────────────────────────────────────────────────────────
+        udp dport 5353 accept
+
+        # ── ICMP (ping + path MTU discovery) ─────────────────────────────────
+        ip  protocol icmp  accept
+        ip6 nexthdr  icmpv6 accept
+
+        # ── KVM/QEMU virtual networks (unrestricted outbound) ────────────────
+        oifname "virbr*" accept
+
+        # ── Lab networks ─────────────────────────────────────────────────────
+        oifname "hisnos-lab-*" accept
+
+        # ── Allowlisted destinations (TCP 443 + 80 only) ─────────────────────
+        ip  daddr @allowed_dests_v4 tcp dport { 80, 443 } accept
+        ip6 daddr @allowed_dests_v6 tcp dport { 80, 443 } accept
+
+        # ── Log and drop everything else ─────────────────────────────────────
+        log prefix "[hisnos_egress DROP] " flags all limit rate 10/second
+        drop
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Table: hisnos_gaming — gaming fast-path (added by hispowerd, shown here)
+# DO NOT load this table at boot — hispowerd manages it dynamically.
+# ─────────────────────────────────────────────────────────────────────────────
+# table inet hisnos_gaming_fast {
+#   chain gaming_out {
+#     type filter hook output priority 5; policy accept;
+#     # Steam, game servers, CDN
+#   }
+# }

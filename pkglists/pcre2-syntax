@@ -1,0 +1,16 @@
+/usr/share/doc/pcre2-syntax
+/usr/share/doc/pcre2-syntax/AUTHORS.md
+/usr/share/doc/pcre2-syntax/ChangeLog
+/usr/share/doc/pcre2-syntax/NEWS
+/usr/share/licenses/pcre2-syntax
+/usr/share/licenses/pcre2-syntax/COPYING
+/usr/share/licenses/pcre2-syntax/LICENCE.md
+/usr/share/man/man3/pcre2.3.gz
+/usr/share/man/man3/pcre2compat.3.gz
+/usr/share/man/man3/pcre2limits.3.gz
+/usr/share/man/man3/pcre2matching.3.gz
+/usr/share/man/man3/pcre2partial.3.gz
+/usr/share/man/man3/pcre2pattern.3.gz
+/usr/share/man/man3/pcre2perform.3.gz
+/usr/share/man/man3/pcre2syntax.3.gz
+/usr/share/man/man3/pcre2unicode.3.gz

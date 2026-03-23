@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# recovery/grub.d/43_hisnos-safe-hardware — GRUB entry for HisnOS Safe Hardware Mode
+#
+# Install at: /etc/grub.d/43_hisnos-safe-hardware
+# Permissions: 0755
+#
+# Boots with conservative hardware parameters for incompatible GPUs,
+# broken power management, or thermal issues:
+#   nomodeset              — disable kernel modesetting (use BIOS framebuffer)
+#   nohz=off               — disable tickless (more predictable timer behavior)
+#   mitigations=auto       — standard security mitigations
+#   intel_pstate=passive   — passive P-state driver (no HWP)
+#   amd_pstate=passive     — passive AMD P-state
+#   nouveau.modeset=0      — disable nouveau GPU
+#   hisnos.safe=1          — activate safe mode services
+
+set -euo pipefail
+
+. /usr/share/grub/grub-mkconfig_lib
+
+BLS_DIR="/boot/loader/entries"
+KERNEL=""
+INITRD=""
+OPTIONS=""
+
+if [[ -d "${BLS_DIR}" ]]; then
+  BLS_ENTRY=$(ls -t "${BLS_DIR}"/*.conf 2>/dev/null | head -1)
+  if [[ -n "${BLS_ENTRY}" ]]; then
+    KERNEL=$(grep  '^linux '   "${BLS_ENTRY}" | awk '{print $2}')
+    INITRD=$(grep  '^initrd '  "${BLS_ENTRY}" | awk '{print $2}')
+    OPTIONS=$(grep '^options ' "${BLS_ENTRY}" | sed 's/^options //')
+  fi
+fi
+
+if [[ -z "${KERNEL}" ]]; then
+  KVER=$(uname -r)
+  KERNEL="/vmlinuz-${KVER}"
+  INITRD="/initramfs-${KVER}.img"
+  OPTIONS="root=${GRUB_CMDLINE_LINUX_DEFAULT:-} ro"
+fi
+
+# Strip conflicting flags
+BASE_OPTIONS=$(echo "${OPTIONS}" | sed -E \
+  's/hisnos\.(safe|recovery)=[^ ]*//g; s/systemd\.unit=[^ ]*//g; s/rhgb//g; s/quiet//g; s/splash//g; s/nomodeset//g; s/nohz=[^ ]*//g; s/intel_pstate=[^ ]*//g; s/amd_pstate=[^ ]*//g; s/nouveau\.modeset=[^ ]*//g')
+
+HW_OPTIONS="${BASE_OPTIONS} ro nomodeset nohz=off mitigations=auto intel_pstate=passive amd_pstate=passive nouveau.modeset=0 hisnos.safe=1 loglevel=4"
+
+cat <<EOF
+menuentry 'HisnOS Safe Hardware Mode' --class hisnos --class gnu-linux --class gnu --class os \$menuentry_id_option 'hisnos-safe-hardware' {
+        load_video
+        set gfxpayload=keep
+        insmod gzio
+        insmod part_gpt
+        insmod ext2
+        search --no-floppy --label --set=root 'hisnos'
+        echo    'Loading HisnOS safe hardware kernel…'
+        linux   ${KERNEL} ${HW_OPTIONS}
+        echo    'Loading initial ramdisk…'
+        initrd  ${INITRD}
+}
+EOF

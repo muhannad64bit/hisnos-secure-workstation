@@ -1,0 +1,22 @@
+{
+    "ref": "hisnos/1.0/x86_64/base",
+    "repos": [
+        "fedora",
+        "updates"
+    ],
+    "selinux": true,
+    "packages": [
+        "kernel",
+        "systemd",
+        "NetworkManager",
+        "plymouth",
+        "nftables",
+        "audit",
+        "bash",
+        "coreutils",
+        "rpm-ostree",
+        "grub2-efi-x64",
+        "shim-x64",
+        "sway"
+    ]
+}

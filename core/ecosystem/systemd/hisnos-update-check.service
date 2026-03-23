@@ -1,0 +1,36 @@
+[Unit]
+Description=HisnOS Weekly Update Check
+Documentation=file:///home/munx64/improtant/HisnOS-Secure-Workstation/docs/ARCHITECTURE-CORE.md
+After=network-online.target hisnosd.service
+Wants=network-online.target
+# Controlled by the paired timer; do not enable directly.
+RefuseManualStart=no
+
+[Service]
+Type=oneshot
+# Queries the configured channel remote for new commits.
+# Emits a structured journald event if an update is available.
+# Does NOT auto-apply — operator must explicitly trigger via IPC or dashboard.
+ExecStart=/bin/bash -c ' \
+  echo "HisnOS update check starting" | systemd-cat -t hisnos-update -p info; \
+  OUTPUT=$(rpm-ostree update --check 2>&1); \
+  if echo "$OUTPUT" | grep -q "No updates available"; then \
+    echo "No updates available" | systemd-cat -t hisnos-update -p info; \
+  else \
+    echo "$OUTPUT" | systemd-cat -t hisnos-update -p notice; \
+    echo "HISNOS_UPDATE_AVAILABLE=true" > /run/hisnos-update-available; \
+  fi'
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+
+# Cgroup limits
+MemoryMax=64M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target

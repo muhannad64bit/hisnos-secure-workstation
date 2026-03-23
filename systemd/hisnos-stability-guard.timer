@@ -1,0 +1,10 @@
+[Unit]
+Description=HisnOS 6-hour Stability Guard Timer
+
+[Timer]
+OnBootSec=1h
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

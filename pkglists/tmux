@@ -1,0 +1,15 @@
+/usr/bin/tmux
+/usr/lib/.build-id
+/usr/lib/.build-id/5c
+/usr/lib/.build-id/5c/cb4a18dca9a0841f987f34bd428ced0470e297
+/usr/lib/systemd/system/tmux@.service
+/usr/share/bash-completion/completions/tmux
+/usr/share/doc/tmux
+/usr/share/doc/tmux/CHANGES
+/usr/share/doc/tmux/README
+/usr/share/doc/tmux/README.ja
+/usr/share/doc/tmux/README.polkit
+/usr/share/doc/tmux/example_tmux.conf
+/usr/share/licenses/tmux
+/usr/share/licenses/tmux/COPYING
+/usr/share/man/man1/tmux.1.gz

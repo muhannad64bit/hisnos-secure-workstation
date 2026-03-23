@@ -1,0 +1,14 @@
+/usr/bin/strace
+/usr/bin/strace-log-merge
+/usr/lib/.build-id
+/usr/lib/.build-id/1e
+/usr/lib/.build-id/1e/3b58554ed97c17c7d9217ac26d4fc935ae63fa
+/usr/share/doc/strace
+/usr/share/doc/strace/COPYING
+/usr/share/doc/strace/CREDITS
+/usr/share/doc/strace/ChangeLog-CVS.gz
+/usr/share/doc/strace/ChangeLog.gz
+/usr/share/doc/strace/NEWS
+/usr/share/doc/strace/README
+/usr/share/man/man1/strace-log-merge.1.gz
+/usr/share/man/man1/strace.1.gz

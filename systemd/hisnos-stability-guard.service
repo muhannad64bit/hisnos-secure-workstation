@@ -1,0 +1,6 @@
+[Unit]
+Description=HisnOS 6-hour Stability Guard Checks
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hisnos-stability-guard.sh

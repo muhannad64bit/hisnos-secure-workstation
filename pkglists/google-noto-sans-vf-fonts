@@ -1,0 +1,6 @@
+/etc/fonts/conf.d/56-google-noto-sans-vf.conf
+/usr/share/fontconfig/conf.avail/56-google-noto-sans-vf.conf
+/usr/share/fonts/google-noto-vf
+/usr/share/fonts/google-noto-vf/NotoSans-Italic[wght].ttf
+/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-vf-fonts.metainfo.xml

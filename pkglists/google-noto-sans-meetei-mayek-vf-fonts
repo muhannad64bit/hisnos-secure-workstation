@@ -1,0 +1,5 @@
+/etc/fonts/conf.d/58-google-noto-sans-meetei-mayek-vf.conf
+/usr/share/fontconfig/conf.avail/58-google-noto-sans-meetei-mayek-vf.conf
+/usr/share/fonts/google-noto-vf
+/usr/share/fonts/google-noto-vf/NotoSansMeeteiMayek[wght].ttf
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-meetei-mayek-vf-fonts.metainfo.xml

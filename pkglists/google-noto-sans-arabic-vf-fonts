@@ -1,0 +1,5 @@
+/etc/fonts/conf.d/56-google-noto-sans-arabic-vf.conf
+/usr/share/fontconfig/conf.avail/56-google-noto-sans-arabic-vf.conf
+/usr/share/fonts/google-noto-vf
+/usr/share/fonts/google-noto-vf/NotoSansArabic[wght].ttf
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-arabic-vf-fonts.metainfo.xml

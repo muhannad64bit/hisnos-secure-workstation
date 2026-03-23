@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=HisnOS Command Search
+Comment=HisnOS SUPER+SPACE search overlay (persistent background daemon)
+Exec=/usr/local/share/hisnos/bin/hisnos-search-ui
+Icon=system-search
+Categories=System;Utility;
+X-KDE-StartupNotify=false
+NoDisplay=true
+
+# Ensures the search UI daemon starts with the graphical session.
+# The UI stays hidden until SUPER+SPACE is pressed.

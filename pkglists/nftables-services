@@ -1,0 +1,8 @@
+/etc/nftables
+/etc/nftables/main.nft
+/etc/nftables/nat.nft
+/etc/nftables/osf
+/etc/nftables/osf/pf.os
+/etc/nftables/router.nft
+/etc/sysconfig/nftables.conf
+/usr/lib/systemd/system/nftables.service

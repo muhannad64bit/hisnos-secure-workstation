@@ -1,0 +1,10 @@
+/lib/firmware/b43-open
+/lib/firmware/b43-open/b0g0bsinitvals5.fw
+/lib/firmware/b43-open/b0g0initvals5.fw
+/lib/firmware/b43-open/ucode5.fw
+/usr/lib/modprobe.d/openfwwf.conf
+/usr/share/doc/b43-openfwwf
+/usr/share/doc/b43-openfwwf/README.openfwwf
+/usr/share/licenses/b43-openfwwf
+/usr/share/licenses/b43-openfwwf/COPYING
+/usr/share/licenses/b43-openfwwf/LICENSE

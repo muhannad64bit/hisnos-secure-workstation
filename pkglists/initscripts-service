@@ -1,0 +1,4 @@
+/usr/bin/service
+/usr/libexec/initscripts
+/usr/libexec/initscripts/legacy-actions
+/usr/share/man/man8/service.8.gz

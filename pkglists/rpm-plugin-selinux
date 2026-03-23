@@ -1,0 +1,6 @@
+/usr/lib/.build-id
+/usr/lib/.build-id/a7
+/usr/lib/.build-id/a7/84ecfac5e1c96ecb144807fb6018a064fd98cb
+/usr/lib/rpm/macros.d/macros.transaction_selinux
+/usr/lib64/rpm-plugins/selinux.so
+/usr/share/man/man8/rpm-plugin-selinux.8.gz

@@ -1,0 +1,63 @@
+[Unit]
+Description=HisnOS Performance Kernel Guard (RT + IRQ + Thermal)
+Documentation=https://hisnos.dev/docs/performance
+# HARDENED: defer to post-login — performance tuning must not block boot.
+After=graphical.target hisnosd.service
+BindsTo=hisnosd.service
+ConditionPathExists=/etc/hisnos/release
+ConditionFileIsExecutable=/usr/local/bin/hisnosd
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+# HARDENED: Type=idle — only starts when nothing else needs CPU.
+Type=idle
+# Supervisor that starts all performance sub-modules in order
+ExecStartPre=/bin/bash -c '\
+  echo "Starting performance kernel runtime..." | systemd-cat -t hisnos-perf'
+
+# Start RT guard (most critical — prevents RT escalation)
+ExecStart=/usr/local/bin/hisnosd --module rt-guard
+
+# IRQ adaptive balancer
+ExecStartPost=/bin/bash -c '\
+  systemctl start hisnos-irq-balancer.service 2>/dev/null || true'
+
+# Thermal controller
+ExecStartPost=/bin/bash -c '\
+  systemctl start hisnos-thermal.service 2>/dev/null || true'
+
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=120
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+User=root
+Group=root
+# HARDENED: lowest cgroup weight, reduced priority.
+Nice=10
+CPUWeight=10
+CPUQuota=10%
+MemoryMax=400M
+TasksMax=16
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelModules=yes
+ProtectControlGroups=no
+ProtectKernelTunables=no
+ReadWritePaths=/sys/fs/cgroup /proc/sys/kernel /run/hisnos
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+SystemCallFilter=@system-service @privileged @io-event
+CapabilityBoundingSet=CAP_SYS_NICE CAP_SYS_ADMIN CAP_KILL CAP_NET_ADMIN
+
+[Install]
+# HARDENED: performance tuning activates after login, not during boot.
+WantedBy=graphical.target

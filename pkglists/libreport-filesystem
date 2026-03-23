@@ -1,0 +1,10 @@
+/etc/libreport
+/etc/libreport/events
+/etc/libreport/events.d
+/etc/libreport/plugins
+/etc/libreport/workflows.d
+/usr/share/libreport
+/usr/share/libreport/conf.d
+/usr/share/libreport/conf.d/plugins
+/usr/share/libreport/events
+/usr/share/libreport/workflows

@@ -1,0 +1,3 @@
+/etc/libssh
+/etc/libssh/libssh_client.config
+/etc/libssh/libssh_server.config

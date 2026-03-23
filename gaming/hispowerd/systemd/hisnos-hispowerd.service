@@ -1,0 +1,60 @@
+[Unit]
+Description=HisnOS Gaming Performance Runtime (hispowerd)
+Documentation=file://%h/.local/share/hisnos/docs/OPERATOR-GUIDE.md
+# Start after hisnosd (control plane state manager) is ready.
+After=hisnosd.service hisnos-dashboard.socket
+Wants=hisnosd.service
+# Must not run during updates.
+Conflicts=hisnos-update.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/hisnos/bin/hispowerd
+ExecStopPost=/bin/sh -c 'test -f /var/lib/hisnos/gaming-state.json && \
+    python3 -c "import json,sys; d=json.load(open(\"/var/lib/hisnos/gaming-state.json\")); \
+    sys.exit(0 if not d.get(\"gaming_active\") else 1)" 2>/dev/null || \
+    journalctl -t hispowerd --no-pager -n 5'
+
+Restart=on-failure
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+# Environment
+Environment=HOME=%h
+Environment=XDG_RUNTIME_DIR=%t
+Environment=HISPOWERD_CONFIG=/etc/hisnos/gaming/hispowerd.json
+
+# Security hardening
+# NOTE: AmbientCapabilities below enable IRQ affinity (CAP_SYS_ADMIN)
+# and negative nice values (CAP_SYS_NICE). Remove if not needed.
+# Without these, those phases degrade gracefully.
+AmbientCapabilities=CAP_SYS_NICE CAP_NET_ADMIN
+# CAP_SYS_ADMIN is NOT set by default (too broad). Add if IRQ tuning is required:
+# AmbientCapabilities=CAP_SYS_NICE CAP_NET_ADMIN CAP_SYS_ADMIN
+CapabilityBoundingSet=CAP_SYS_NICE CAP_NET_ADMIN CAP_SYS_ADMIN
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# Needs read access to /proc (process scanning, IRQ detection).
+# Needs write access to gaming state file and cgroup cpu.max.
+ReadWritePaths=/var/lib/hisnos /var/log/hisnos/gaming
+ReadWritePaths=/sys/fs/cgroup
+# Allow reading process info via /proc.
+# Note: ProtectProc=noaccess is intentionally NOT set (needs /proc/<pid>/cgroup, /cmdline).
+
+# Resource limits
+MemoryMax=64M
+CPUQuota=15%
+TasksMax=16
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hispowerd
+
+[Install]
+WantedBy=default.target

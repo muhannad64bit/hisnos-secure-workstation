@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# recovery/grub.d/41_hisnos-recovery — GRUB menu entry generator for HisnOS Recovery
+#
+# Install at: /etc/grub.d/41_hisnos-recovery
+# Permissions: 0755
+#
+# Generates a GRUB 2 menuentry that boots the currently-running kernel with
+# recovery flags:
+#   hisnos.recovery=1  — activates the dracut 95hisnos-recovery module
+#   systemd.unit=rescue.target — drops to a rescue shell after dracut hooks
+#   ro                 — mounts rootfs read-only for safe repair
+#
+# This script is sourced by grub2-mkconfig; it must emit valid GRUB script.
+
+set -euo pipefail
+
+. /usr/share/grub/grub-mkconfig_lib
+
+# Only emit the entry when GRUB_DISABLE_RECOVERY != true.
+if [[ "${GRUB_DISABLE_RECOVERY:-}" == "true" ]]; then
+  exit 0
+fi
+
+# Detect the running kernel and initramfs from the default BLS entry.
+# On Fedora (BLS-only), kernel/initrd live under /boot/loader/entries/.
+BLS_DIR="/boot/loader/entries"
+KERNEL=""
+INITRD=""
+OPTIONS=""
+
+if [[ -d "${BLS_DIR}" ]]; then
+  # Pick the most recently-modified (i.e. newest) BLS entry.
+  BLS_ENTRY=$(ls -t "${BLS_DIR}"/*.conf 2>/dev/null | head -1)
+  if [[ -n "${BLS_ENTRY}" ]]; then
+    KERNEL=$(grep  '^linux '   "${BLS_ENTRY}" | awk '{print $2}')
+    INITRD=$(grep  '^initrd '  "${BLS_ENTRY}" | awk '{print $2}')
+    OPTIONS=$(grep '^options ' "${BLS_ENTRY}" | sed 's/^options //')
+  fi
+fi
+
+# Fall back to running kernel if BLS parse failed.
+if [[ -z "${KERNEL}" ]]; then
+  KVER=$(uname -r)
+  KERNEL="/vmlinuz-${KVER}"
+  INITRD="/initramfs-${KVER}.img"
+  OPTIONS="root=${GRUB_CMDLINE_LINUX_DEFAULT:-} ro"
+fi
+
+# Strip any existing recovery flags to avoid duplicates.
+BASE_OPTIONS=$(echo "${OPTIONS}" | sed -E \
+  's/hisnos\.recovery=[^ ]*//g; s/systemd\.unit=[^ ]*//g; s/rhgb//g; s/quiet//g')
+
+RECOVERY_OPTIONS="${BASE_OPTIONS} ro hisnos.recovery=1 systemd.unit=rescue.target"
+
+cat << EOF
+menuentry 'HisnOS Recovery Mode' --class hisnos --class gnu-linux --class gnu --class os \$menuentry_id_option 'hisnos-recovery' {
+        load_video
+        set gfxpayload=keep
+        insmod gzio
+        insmod part_gpt
+        insmod ext2
+        search --no-floppy --label --set=root 'hisnos'
+        echo    'Loading HisnOS recovery kernel…'
+        linux   ${KERNEL} ${RECOVERY_OPTIONS}
+        echo    'Loading initial ramdisk…'
+        initrd  ${INITRD}
+}
+EOF

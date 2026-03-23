@@ -1,0 +1,12 @@
+/etc/alternatives
+/etc/alternatives.admindir
+/usr/bin/alternatives
+/usr/bin/update-alternatives
+/usr/lib/.build-id
+/usr/lib/.build-id/6b
+/usr/lib/.build-id/6b/430167fad218b0181b3305b0c7989c725efe46
+/usr/share/licenses/alternatives
+/usr/share/licenses/alternatives/COPYING
+/usr/share/man/man8/alternatives.8.gz
+/usr/share/man/man8/update-alternatives.8.gz
+/var/lib/alternatives

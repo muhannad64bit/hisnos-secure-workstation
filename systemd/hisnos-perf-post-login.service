@@ -1,0 +1,52 @@
+[Unit]
+Description=HisnOS Performance Subsystems (Post-Login Activation)
+Documentation=file:///usr/local/lib/hisnos/perf-activate.sh
+#
+# This service activates performance tuning ONLY after the user has
+# logged in to a graphical session. It MUST NOT run during boot.
+#
+# Subsystems activated here (NOT at boot):
+#   - IRQ adaptive balancer (gaming mode only)
+#   - Frame predictor (gaming mode only)
+#   - Thermal controller (gaming mode only)
+#   - RT guard (gaming mode only)
+#   - CPU governor switch to performance/schedutil
+#   - vm.swappiness = 10 (gaming) / 60 (default)
+#
+# Subsystems explicitly NOT activated here:
+#   - Automation AI (separate enable, manual only)
+#   - Fleet sync (timer-based, after network-online)
+#   - Marketplace (on-demand only)
+
+After=graphical.target display-manager.service hisnosd.service
+Wants=hisnosd.service
+# Do NOT start until graphical session exists.
+ConditionPathExists=/run/display-manager.pid
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+Type=oneshot
+RemainAfterExit=yes
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+CPUQuota=5%
+MemoryMax=64M
+NoNewPrivileges=no
+PrivateNetwork=yes
+
+ExecStart=/usr/local/lib/hisnos/perf-activate.sh
+ExecStop=/usr/local/lib/hisnos/perf-deactivate.sh
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-perf-post-login
+
+TimeoutStartSec=15
+TimeoutStopSec=10
+
+[Install]
+WantedBy=graphical.target

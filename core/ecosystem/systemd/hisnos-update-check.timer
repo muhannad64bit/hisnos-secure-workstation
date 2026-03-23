@@ -1,0 +1,15 @@
+[Unit]
+Description=HisnOS Weekly Update Check Timer
+Documentation=file:///home/munx64/improtant/HisnOS-Secure-Workstation/docs/ARCHITECTURE-CORE.md
+
+[Timer]
+# Run weekly, Monday at 02:00 local time.
+OnCalendar=Mon *-*-* 02:00:00
+# Randomise startup within ±4h to distribute load across fleet.
+RandomizedDelaySec=4h
+# Persist timer state across reboots; fire once on next boot if missed.
+Persistent=true
+Unit=hisnos-update-check.service
+
+[Install]
+WantedBy=timers.target

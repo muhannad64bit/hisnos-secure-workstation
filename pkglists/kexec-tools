@@ -1,0 +1,14 @@
+/usr/bin/kexec
+/usr/bin/vmcore-dmesg
+/usr/lib/.build-id
+/usr/lib/.build-id/21
+/usr/lib/.build-id/21/562b1270115541f7cefda69aae651c32256cb3
+/usr/lib/.build-id/33
+/usr/lib/.build-id/33/c00e33b3e291ff0d6a91e89f71e870805dea10
+/usr/share/doc/kexec-tools
+/usr/share/doc/kexec-tools/News
+/usr/share/doc/kexec-tools/TODO
+/usr/share/licenses/kexec-tools
+/usr/share/licenses/kexec-tools/COPYING
+/usr/share/man/man8/kexec.8.gz
+/usr/share/man/man8/vmcore-dmesg.8.gz

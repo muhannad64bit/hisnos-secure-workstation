@@ -1,0 +1,45 @@
+[Unit]
+Description=HisnOS First Boot Onboarding Wizard
+Documentation=https://hisnos.local/docs/onboarding
+# Only run if onboarding has not been completed yet.
+ConditionPathExists=!/var/lib/hisnos/onboarding-state.json
+# Require graphical session so the browser can open.
+After=graphical-session.target
+Wants=graphical-session.target
+# Depend on hisnosd so API checks work; failure is non-fatal.
+After=hisnosd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hisnos-onboarding
+Restart=no
+
+# Hard timeout: let systemd kill the unit if it somehow runs forever.
+# The Go binary also enforces a 30-minute soft timeout internally.
+TimeoutStopSec=90
+
+# Resource limits — wizard is UI-only, no heavy lifting.
+MemoryMax=128M
+CPUQuota=25%
+TasksMax=32
+
+# Minimal capability set.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# Filesystem restrictions.  The binary needs to write the state file, call
+# xdg-open, and spawn vault/nft sub-processes.
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/hisnos
+# Preserve XDG_RUNTIME_DIR so the browser can open on Wayland.
+BindReadOnlyPaths=/run/user/%U
+
+# Environment.
+Environment=HOME=%h
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+PassEnvironment=WAYLAND_DISPLAY DISPLAY DBUS_SESSION_BUS_ADDRESS
+
+[Install]
+# Activated by a first-boot preset in /usr/lib/systemd/user-preset/.
+WantedBy=graphical-session.target

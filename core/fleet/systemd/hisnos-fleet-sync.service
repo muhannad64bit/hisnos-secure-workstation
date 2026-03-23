@@ -1,0 +1,40 @@
+[Unit]
+Description=HisnOS Fleet Policy Sync (one-shot)
+Documentation=https://hisnos.dev/docs/fleet
+After=network-online.target hisnosd.service
+Wants=network-online.target
+ConditionPathExists=/etc/hisnos/fleet.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hisnosd --module fleet-sync --once
+TimeoutStartSec=60
+RemainAfterExit=no
+
+# HARDENED: low priority — fleet sync is background network I/O.
+Nice=15
+IOSchedulingClass=idle
+
+User=hisnosd
+Group=hisnosd
+
+# Resource limits.
+MemoryMax=32M
+TasksMax=8
+
+# Hardening.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ReadWritePaths=/var/lib/hisnos
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+SystemCallFilter=@system-service @network-io
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

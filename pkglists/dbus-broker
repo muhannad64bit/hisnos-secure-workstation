@@ -1,0 +1,17 @@
+/usr/bin/dbus-broker
+/usr/bin/dbus-broker-launch
+/usr/lib/.build-id
+/usr/lib/.build-id/0a
+/usr/lib/.build-id/0a/a751618086794c27245827b105c6b2552b32b5
+/usr/lib/.build-id/66
+/usr/lib/.build-id/66/1ffe36cb3d1f3483f8cd6cb3e74cd3e1b57560
+/usr/lib/systemd/catalog/dbus-broker-launch.catalog
+/usr/lib/systemd/catalog/dbus-broker.catalog
+/usr/lib/systemd/system/dbus-broker.service
+/usr/lib/systemd/user/dbus-broker.service
+/usr/lib/sysusers.d/dbus-broker.conf
+/usr/share/licenses/dbus-broker
+/usr/share/licenses/dbus-broker/AUTHORS
+/usr/share/licenses/dbus-broker/LICENSE
+/usr/share/man/man1/dbus-broker-launch.1.gz
+/usr/share/man/man1/dbus-broker.1.gz

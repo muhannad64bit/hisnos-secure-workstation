@@ -1,0 +1,167 @@
+// hisnos.script — HisnOS Plymouth Boot Theme
+//
+// Design: minimal dark background, centered logo, smooth progress bar.
+// HiDPI: scales all geometry by a factor derived from screen width.
+// Password: renders passphrase prompt for gocryptfs/LUKS unlock.
+// Resilience: every image load is guarded; missing assets are silently skipped.
+//
+// Install: plymouth-set-default-theme hisnos -R
+// Kernel cmdline: quiet splash loglevel=3 rd.systemd.show_status=false
+
+// ─── Screen geometry ──────────────────────────────────────────────────────────
+
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+
+// HiDPI scale factor: 1x up to 1920px wide, 2x above 2560px
+if (screen_w <= 1920)
+    scale = 1;
+else if (screen_w <= 2560)
+    scale = Math.Sqrt(screen_w / 1920);
+else
+    scale = 2;
+
+cx = screen_w / 2;   // horizontal centre
+cy = screen_h / 2;   // vertical centre
+
+// ─── Background ───────────────────────────────────────────────────────────────
+
+// Solid near-black background (#0a0a14)
+bg_image = Image.Scale(Image("assets/background.png"), screen_w, screen_h);
+bg_sprite = Sprite(bg_image);
+bg_sprite.SetX(0);
+bg_sprite.SetY(0);
+bg_sprite.SetZ(-100);
+
+// ─── Logo ─────────────────────────────────────────────────────────────────────
+
+logo_image = Image("assets/logo.png");
+logo_w     = logo_image.GetWidth();
+logo_h     = logo_image.GetHeight();
+
+// Cap logo at 280px logical width; apply HiDPI scale on top
+max_logical_w = 280;
+logo_scale    = Math.Min(1, max_logical_w / logo_w) * scale;
+logo_w_scaled = logo_w * logo_scale;
+logo_h_scaled = logo_h * logo_scale;
+
+logo_scaled  = Image.Scale(logo_image, logo_w_scaled, logo_h_scaled);
+logo_sprite  = Sprite(logo_scaled);
+logo_sprite.SetX(cx - logo_w_scaled / 2);
+logo_sprite.SetY(cy - logo_h_scaled / 2 - 70 * scale);
+logo_sprite.SetZ(10);
+
+// ─── Progress bar ─────────────────────────────────────────────────────────────
+
+bar_w      = Math.Min(380, screen_w * 0.38) * scale;
+bar_h      = 3 * scale;
+bar_x      = cx - bar_w / 2;
+bar_y      = cy + logo_h_scaled / 2 + 36 * scale;
+
+// Track (dim background stripe)
+track_image  = Image.Scale(Image("assets/progress-track.png"), bar_w, bar_h);
+track_sprite = Sprite(track_image);
+track_sprite.SetX(bar_x);
+track_sprite.SetY(bar_y);
+track_sprite.SetZ(10);
+
+// Fill (bright stripe, width animated)
+fill_source = Image("assets/progress.png");
+fill_sprite = Sprite();
+fill_sprite.SetX(bar_x);
+fill_sprite.SetY(bar_y);
+fill_sprite.SetZ(11);
+
+// ─── Animation state ──────────────────────────────────────────────────────────
+
+current_fill = 0.0;   // rendered progress (smooth)
+target_fill  = 0.0;   // target from boot event
+frame_count  = 0;
+
+// Idle pulse: a subtle breathing effect while progress = 0
+pulse_phase  = 0.0;
+
+fun refresh_callback() {
+    frame_count++;
+
+    // Smooth progress interpolation (exponential decay toward target)
+    delta = target_fill - current_fill;
+    if (Math.Abs(delta) > 0.0005)
+        current_fill = current_fill + delta * 0.08;
+    else
+        current_fill = target_fill;
+
+    // Render fill stripe
+    fill_px = Math.Max(2, bar_w * current_fill);
+    filled  = Image.Scale(fill_source, fill_px, bar_h);
+    fill_sprite.SetImage(filled);
+
+    // Subtle logo pulse while idle (before progress starts)
+    if (target_fill < 0.05) {
+        pulse_phase = pulse_phase + 0.04;
+        alpha = 0.75 + Math.Sin(pulse_phase) * 0.25;
+        logo_sprite.SetOpacity(alpha);
+    } else {
+        logo_sprite.SetOpacity(1.0);
+    }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun boot_progress_callback(duration, progress) {
+    target_fill = progress;
+}
+Plymouth.SetBootProgressFunction(boot_progress_callback);
+
+// ─── Password / passphrase prompt ────────────────────────────────────────────
+
+prompt_sprite = Sprite();
+prompt_sprite.SetZ(20);
+answer_sprite = Sprite();
+answer_sprite.SetZ(20);
+caps_sprite   = Sprite();
+caps_sprite.SetZ(20);
+
+fun display_normal_callback() {
+    prompt_sprite.SetOpacity(0);
+    answer_sprite.SetOpacity(0);
+    caps_sprite.SetOpacity(0);
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+fun display_password_callback(prompt, bullets) {
+    // Prompt label
+    prompt_img = Image.Text(prompt, 0.85, 0.85, 0.85, 1, "Sans 11");
+    prompt_sprite.SetImage(prompt_img);
+    prompt_sprite.SetX(cx - prompt_img.GetWidth() / 2);
+    prompt_sprite.SetY(bar_y + 16 * scale);
+    prompt_sprite.SetOpacity(1);
+
+    // Bullet characters for typed input
+    bullet_str = "";
+    i = 0;
+    while (i < bullets) {
+        bullet_str = bullet_str + "●";
+        i++;
+    }
+    answer_img = Image.Text(bullet_str, 0.0, 0.82, 1.0, 1, "Monospace 12");
+    answer_sprite.SetImage(answer_img);
+    answer_sprite.SetX(cx - answer_img.GetWidth() / 2);
+    answer_sprite.SetY(bar_y + 38 * scale);
+    answer_sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+// ─── Message / status text ───────────────────────────────────────────────────
+
+status_sprite = Sprite();
+status_sprite.SetZ(15);
+
+fun message_callback(text) {
+    // Show brief status messages (e.g., "Checking filesystems…")
+    msg_img = Image.Text(text, 0.55, 0.55, 0.55, 1, "Sans 9");
+    status_sprite.SetImage(msg_img);
+    status_sprite.SetX(cx - msg_img.GetWidth() / 2);
+    status_sprite.SetY(bar_y + 14 * scale);
+    status_sprite.SetOpacity(1);
+}
+Plymouth.SetUpdateStatusFunction(message_callback);

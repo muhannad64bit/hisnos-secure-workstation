@@ -1,0 +1,4 @@
+/usr/share/selinux/devel/include/distributed/passt.if
+/usr/share/selinux/packages/targeted/passt-repair.pp
+/usr/share/selinux/packages/targeted/passt.pp
+/usr/share/selinux/packages/targeted/pasta.pp

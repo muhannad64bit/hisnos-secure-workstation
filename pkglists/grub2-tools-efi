@@ -1,0 +1,13 @@
+/usr/bin/grub2-glue-efi
+/usr/bin/grub2-macbless
+/usr/bin/grub2-render-label
+/usr/lib/.build-id
+/usr/lib/.build-id/45
+/usr/lib/.build-id/45/ae02989df82ba68d05b8d014c72e058f56c1c9
+/usr/lib/.build-id/82
+/usr/lib/.build-id/82/da12dffad8ecaaf3985c27da772ff16c3dd030
+/usr/lib/.build-id/d3
+/usr/lib/.build-id/d3/75ff4225d53b8e2acf234d70ea99caacd8b4cb
+/usr/share/man/man1/grub2-glue-efi.1.gz
+/usr/share/man/man1/grub2-render-label.1.gz
+/usr/share/man/man8/grub2-macbless.8.gz

@@ -1,0 +1,5 @@
+/etc/fonts/conf.d/65-0-google-noto-sans-georgian-vf.conf
+/usr/share/fontconfig/conf.avail/65-0-google-noto-sans-georgian-vf.conf
+/usr/share/fonts/google-noto-vf
+/usr/share/fonts/google-noto-vf/NotoSansGeorgian[wght].ttf
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-georgian-vf-fonts.metainfo.xml

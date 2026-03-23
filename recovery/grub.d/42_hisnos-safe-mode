@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# recovery/grub.d/42_hisnos-safe-mode — GRUB menu entry for HisnOS Safe Mode
+#
+# Install at: /etc/grub.d/42_hisnos-safe-mode
+# Permissions: 0755
+#
+# Generates a GRUB 2 menuentry that boots with safe mode flags:
+#   hisnos.safe=1           — activates hisnos-safe-mode.service
+#   systemd.unit=multi-user.target — skip graphical.target (faster, safer)
+#   ro                      — read-only root for safe repair
+#
+# This script is sourced by grub2-mkconfig; it must emit valid GRUB script.
+
+set -euo pipefail
+
+. /usr/share/grub/grub-mkconfig_lib
+
+# Detect the running kernel and initramfs from the default BLS entry.
+BLS_DIR="/boot/loader/entries"
+KERNEL=""
+INITRD=""
+OPTIONS=""
+
+if [[ -d "${BLS_DIR}" ]]; then
+  BLS_ENTRY=$(ls -t "${BLS_DIR}"/*.conf 2>/dev/null | head -1)
+  if [[ -n "${BLS_ENTRY}" ]]; then
+    KERNEL=$(grep  '^linux '   "${BLS_ENTRY}" | awk '{print $2}')
+    INITRD=$(grep  '^initrd '  "${BLS_ENTRY}" | awk '{print $2}')
+    OPTIONS=$(grep '^options ' "${BLS_ENTRY}" | sed 's/^options //')
+  fi
+fi
+
+# Fall back to running kernel if BLS parse failed.
+if [[ -z "${KERNEL}" ]]; then
+  KVER=$(uname -r)
+  KERNEL="/vmlinuz-${KVER}"
+  INITRD="/initramfs-${KVER}.img"
+  OPTIONS="root=${GRUB_CMDLINE_LINUX_DEFAULT:-} ro"
+fi
+
+# Strip existing recovery/safe flags to avoid duplicates.
+# Also strip rhgb/quiet — safe mode should be verbose.
+BASE_OPTIONS=$(echo "${OPTIONS}" | sed -E \
+  's/hisnos\.(safe|recovery)=[^ ]*//g; s/systemd\.unit=[^ ]*//g; s/rhgb//g; s/quiet//g; s/splash//g')
+
+SAFE_OPTIONS="${BASE_OPTIONS} ro hisnos.safe=1 systemd.unit=multi-user.target loglevel=4"
+
+cat <<EOF
+menuentry 'HisnOS Safe Mode' --class hisnos --class gnu-linux --class gnu --class os \$menuentry_id_option 'hisnos-safe-mode' {
+        load_video
+        set gfxpayload=keep
+        insmod gzio
+        insmod part_gpt
+        insmod ext2
+        search --no-floppy --label --set=root 'hisnos'
+        echo    'Loading HisnOS safe mode kernel…'
+        linux   ${KERNEL} ${SAFE_OPTIONS}
+        echo    'Loading initial ramdisk…'
+        initrd  ${INITRD}
+}
+EOF

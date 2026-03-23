@@ -1,0 +1,14 @@
+/usr/lib/.build-id
+/usr/lib/.build-id/f3
+/usr/lib/.build-id/f3/d2809f39ad18ddd988e84528fca8e66f081c94
+/usr/lib/systemd/system/netavark-dhcp-proxy.service
+/usr/lib/systemd/system/netavark-dhcp-proxy.socket
+/usr/lib/systemd/system/netavark-firewalld-reload.service
+/usr/libexec/podman
+/usr/libexec/podman/netavark
+/usr/share/licenses/netavark
+/usr/share/licenses/netavark/LICENSE
+/usr/share/licenses/netavark/LICENSE.dependencies
+/usr/share/licenses/netavark/cargo-vendor.txt
+/usr/share/man/man1/netavark.1.gz
+/usr/share/man/man7/netavark-firewalld.7.gz

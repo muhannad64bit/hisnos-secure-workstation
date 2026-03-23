@@ -1,0 +1,98 @@
+[Unit]
+Description=HisnOS Live Boot Health Validator
+Documentation=file:///var/log/hisnos/dracut-live-boot.log
+# Must run after basic system services are up, before the installer.
+# HARDENED: removed network.target, NetworkManager, systemd-resolved from After=.
+# Network is NOT required for live boot health validation.
+# The NM check in Check 4 already handles missing NM gracefully.
+After=dbus.service
+Before=hisnos-installer.service
+# Only run on live boots.
+ConditionKernelCommandLine=hisnos.live=1
+ConditionPathExists=/etc/hisnos/.live-ok
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+MemoryMax=300M
+MemoryHigh=250M
+MemorySwapMax=0
+TasksMax=200
+ManagedOOMSwap=kill
+ManagedOOMMemoryPressure=kill
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=120
+Type=oneshot
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-live-health
+
+# ── Check 1: Overlayfs is mounted and writable ─────────────────────────────
+ExecStart=/bin/sh -c '\
+    echo "[health] Check 1: overlayfs writable..."; \
+    TESTFILE=/run/hisnos/.health-write-test; \
+    touch "$TESTFILE" 2>/dev/null || \
+        { echo "[health] FAIL: root filesystem is not writable" >&2; exit 1; }; \
+    rm -f "$TESTFILE"; \
+    echo "[health] PASS: root filesystem writable"'
+
+# ── Check 2: /etc/hisnos/.live-ok marker is present ──────────────────────
+ExecStart=/bin/sh -c '\
+    echo "[health] Check 2: live-ok marker..."; \
+    test -f /etc/hisnos/.live-ok || \
+        { echo "[health] FAIL: /etc/hisnos/.live-ok missing" >&2; exit 1; }; \
+    echo "[health] PASS: live-ok marker present"'
+
+# ── Check 3: DBus is operational ──────────────────────────────────────────
+ExecStart=/bin/sh -c '\
+    echo "[health] Check 3: D-Bus..."; \
+    timeout 10 dbus-send \
+        --system \
+        --dest=org.freedesktop.DBus \
+        --type=method_call \
+        --print-reply \
+        /org/freedesktop/DBus \
+        org.freedesktop.DBus.ListNames \
+        >/dev/null 2>&1 || \
+        { echo "[health] WARN: D-Bus not responding (non-fatal for minimal installs)"; }; \
+    echo "[health] PASS: D-Bus check complete"'
+
+# ── Check 4: NetworkManager is active (warn only — offline install is valid) ─
+ExecStart=/bin/sh -c '\
+    echo "[health] Check 4: NetworkManager..."; \
+    systemctl is-active NetworkManager.service >/dev/null 2>&1 && \
+        echo "[health] PASS: NetworkManager active" || \
+        echo "[health] WARN: NetworkManager not active (offline mode)"'
+
+# ── Check 5: Verify boot state file exists ────────────────────────────────
+ExecStart=/bin/sh -c '\
+    echo "[health] Check 5: boot state..."; \
+    if test -f /etc/hisnos/live-boot-state; then \
+        cat /etc/hisnos/live-boot-state | while IFS= read -r line; do \
+            echo "[health]   ${line}"; \
+        done; \
+        echo "[health] PASS: boot state readable"; \
+    else \
+        echo "[health] WARN: /etc/hisnos/live-boot-state not found (dracut log may be missing)"; \
+    fi'
+
+# ── Final: Create /run/hisnos-live-ok (installer gate) ───────────────────
+# Only reached if all fatal checks above passed.
+ExecStart=/bin/mkdir -p /run/hisnos
+ExecStart=/bin/touch /run/hisnos-live-ok
+ExecStart=/bin/sh -c 'echo "[health] All health checks PASSED — /run/hisnos-live-ok created"'
+
+# ── On failure: mark failure and prevent installer from starting ───────────
+ExecStartPost=-/bin/sh -c '\
+    if ! test -f /run/hisnos-live-ok; then \
+        echo "HEALTH_FAILED=1" > /run/hisnos/health-fail; \
+        echo "hisnos-live-health: health checks failed — installer blocked" >&2; \
+    fi'
+
+[Install]
+WantedBy=multi-user.target

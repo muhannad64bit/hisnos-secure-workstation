@@ -1,0 +1,6 @@
+/usr/bin/grubby
+/usr/lib/kernel/install.d/10-devicetree.install
+/usr/lib/kernel/install.d/95-kernel-hooks.install
+/usr/share/licenses/grubby
+/usr/share/licenses/grubby/COPYING
+/usr/share/man/man8/grubby.8.gz

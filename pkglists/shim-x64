@@ -1,0 +1,7 @@
+/boot/efi/EFI/BOOT/BOOTX64.EFI
+/boot/efi/EFI/BOOT/fbx64.efi
+/boot/efi/EFI/fedora/BOOTX64.CSV
+/boot/efi/EFI/fedora/mmx64.efi
+/boot/efi/EFI/fedora/shim.efi
+/boot/efi/EFI/fedora/shimx64.efi
+/etc/dnf/protected.d/shim.conf

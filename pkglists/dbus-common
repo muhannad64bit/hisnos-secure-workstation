@@ -1,0 +1,16 @@
+/etc/dbus-1
+/etc/dbus-1/session.conf
+/etc/dbus-1/session.d
+/etc/dbus-1/system.conf
+/etc/dbus-1/system.d
+/usr/lib/systemd/system/dbus.socket
+/usr/lib/systemd/user/dbus.socket
+/usr/lib/sysusers.d/dbus.conf
+/usr/share/dbus-1
+/usr/share/dbus-1/interfaces
+/usr/share/dbus-1/services
+/usr/share/dbus-1/session.conf
+/usr/share/dbus-1/session.d
+/usr/share/dbus-1/system-services
+/usr/share/dbus-1/system.conf
+/usr/share/dbus-1/system.d

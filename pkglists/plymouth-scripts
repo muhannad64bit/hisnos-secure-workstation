@@ -1,0 +1,4 @@
+/usr/bin/plymouth-set-default-theme
+/usr/libexec/plymouth/plymouth-generate-initrd
+/usr/libexec/plymouth/plymouth-populate-initrd
+/usr/libexec/plymouth/plymouth-update-initrd

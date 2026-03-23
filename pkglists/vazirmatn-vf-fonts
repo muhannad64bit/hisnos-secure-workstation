@@ -1,0 +1,11 @@
+/etc/fonts/conf.d/55-vazirmatn-vf-fonts.conf
+/usr/share/doc/vazirmatn-vf-fonts
+/usr/share/doc/vazirmatn-vf-fonts/AUTHORS.txt
+/usr/share/doc/vazirmatn-vf-fonts/CHANGELOG.md
+/usr/share/doc/vazirmatn-vf-fonts/README.md
+/usr/share/fontconfig/conf.avail/55-vazirmatn-vf-fonts.conf
+/usr/share/fonts/vazirmatn-vf-fonts
+/usr/share/fonts/vazirmatn-vf-fonts/Vazirmatn[wght].ttf
+/usr/share/licenses/vazirmatn-vf-fonts
+/usr/share/licenses/vazirmatn-vf-fonts/OFL.txt
+/usr/share/metainfo/org.fedoraproject.vazirmatn-vf-fonts.metainfo.xml

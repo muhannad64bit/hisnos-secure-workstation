@@ -1,0 +1,6 @@
+/etc/sysconfig/micro-dnsconfd
+/usr/bin/micro-dnsconfd
+/usr/lib/.build-id
+/usr/lib/.build-id/a0
+/usr/lib/.build-id/a0/ae9e7d81892b0b9d1f18039dd7119bd7e0708f
+/usr/lib/systemd/system/micro-dnsconfd.service

@@ -1,0 +1,15 @@
+/etc/debuginfod/elfutils.certpath
+/etc/debuginfod/elfutils.urls
+/etc/profile.d/debuginfod.csh
+/etc/profile.d/debuginfod.sh
+/usr/bin/debuginfod-find
+/usr/lib/.build-id
+/usr/lib/.build-id/01
+/usr/lib/.build-id/01/abe1194552c21158863547cde4cb08b48b7bea
+/usr/lib/.build-id/21
+/usr/lib/.build-id/21/0a311c916b90798d1c44face92b8ec626dc934
+/usr/lib64/libdebuginfod-0.193.so
+/usr/lib64/libdebuginfod.so.1
+/usr/share/fish/vendor_conf.d/debuginfod.fish
+/usr/share/man/man1/debuginfod-find.1.gz
+/usr/share/man/man7/debuginfod-client-config.7.gz

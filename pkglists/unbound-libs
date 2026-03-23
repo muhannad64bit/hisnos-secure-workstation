@@ -1,0 +1,15 @@
+/etc/unbound
+/etc/unbound/dnssec-root.key
+/etc/unbound/root.key
+/usr/lib/.build-id
+/usr/lib/.build-id/c0
+/usr/lib/.build-id/c0/f9098f57e8656cb9f5386b2d0c2222d1374144
+/usr/lib/sysusers.d/unbound.conf
+/usr/lib64/libunbound.so.8
+/usr/lib64/libunbound.so.8.1.32
+/usr/share/doc/unbound-libs
+/usr/share/doc/unbound-libs/README
+/usr/share/licenses/unbound-libs
+/usr/share/licenses/unbound-libs/LICENSE
+/var/lib/unbound
+/var/lib/unbound/root.key

@@ -1,0 +1,11 @@
+/etc/libblockdev
+/etc/libblockdev/3/conf.d
+/etc/libblockdev/3/conf.d/00-default.cfg
+/usr/lib/.build-id
+/usr/lib/.build-id/63
+/usr/lib/.build-id/63/0e57831a408fae68c0de185b5b98e4fd19add4
+/usr/lib64/girepository-1.0/BlockDev-3.0.typelib
+/usr/lib64/libblockdev.so.3
+/usr/lib64/libblockdev.so.3.0.0
+/usr/share/licenses/libblockdev
+/usr/share/licenses/libblockdev/LICENSE

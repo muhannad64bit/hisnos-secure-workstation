@@ -14,6 +14,9 @@
 #   9) Gaming Performance Integration (hisnos-gaming group, polkit rule, scripts, units)
 #  10) rpm-ostree kernel override validation (warning if mismatch)
 #  11) Command Center (searchd Go daemon + PySide6 UI overlay + SUPER+SPACE shortcut)
+#  12) hispowerd — Gaming Performance Runtime (Go daemon, 10-phase orchestrator)
+#  13) Distribution Experience Layer (Plymouth theme, onboarding wizard, recovery entry)
+#  14) Distribution Finalization (boot health service, status indicator, version file, cmdline)
 #
 # Safety:
 #   - Avoids touching /usr (except building dashboard in the user's home)
@@ -858,6 +861,96 @@ main() {
 
   status_line OK "Gaming integration" "complete — re-login required for group membership to take effect"
 
+  # Step 9b: hispowerd — Gaming Performance Runtime
+  CURRENT_STEP="hispowerd build"
+  section "Gaming Performance Runtime (hispowerd)"
+
+  HISPOWERD_SRC="${REPO_DIR}/gaming/hispowerd"
+  HISPOWERD_BIN="${USER_DATA_BASE}/bin/hispowerd"
+  HISPOWERD_UNIT_SRC="${REPO_DIR}/gaming/hispowerd/systemd/hisnos-hispowerd.service"
+  HISPOWERD_RECOVER_SRC="${REPO_DIR}/gaming/hisnos-hispowerd-recover.sh"
+  FAST_NFT_SRC="${REPO_DIR}/gaming/nftables/hisnos-gaming-fast.nft"
+  HISPOWERD_CFG_DIR="/etc/hisnos/gaming"
+
+  # Build hispowerd binary.
+  if [[ "${HISNOS_DISABLE_DASHBOARD_BUILD:-0}" == "1" ]]; then
+    if [[ ! -f "${HISPOWERD_BIN}" ]]; then
+      warn "hispowerd binary missing and build disabled — gaming performance runtime unavailable"
+    else
+      status_line SKIP "hispowerd build" "using pre-built binary at ${HISPOWERD_BIN}"
+    fi
+  elif ! command -v go &>/dev/null; then
+    warn "Go toolchain not found — hispowerd not built"
+  elif [[ ! -d "${HISPOWERD_SRC}" ]]; then
+    warn "gaming/hispowerd/ source directory not found"
+  else
+    mkdir -p "${USER_DATA_BASE}/bin"
+    if (cd "${HISPOWERD_SRC}" && go build -o "${HISPOWERD_BIN}" .); then
+      chmod 755 "${HISPOWERD_BIN}"
+      status_line OK "hispowerd binary" "${HISPOWERD_BIN}"
+    else
+      warn "hispowerd go build failed — gaming performance runtime unavailable (non-fatal)"
+    fi
+  fi
+
+  # Install config directory and default config.
+  if sudo mkdir -p "${HISPOWERD_CFG_DIR}" 2>/dev/null; then
+    if [[ ! -f "${HISPOWERD_CFG_DIR}/hispowerd.json" ]]; then
+      sudo tee "${HISPOWERD_CFG_DIR}/hispowerd.json" > /dev/null << 'HISPOWERD_CFG_EOF'
+{
+  "scan_interval_seconds": 2,
+  "steam_detection": true,
+  "proton_detection": true,
+  "gaming_cores": [2, 3, 4, 5, 6, 7],
+  "system_cores": [0, 1],
+  "cpu_governor": "performance",
+  "game_nice_value": -5,
+  "inject_env_vars": true,
+  "fast_nft_file": "/etc/nftables/hisnos-gaming-fast.nft",
+  "gaming_state_file": "/var/lib/hisnos/gaming-state.json",
+  "control_plane_state_file": "/var/lib/hisnos/core-state.json"
+}
+HISPOWERD_CFG_EOF
+      status_line OK "hispowerd.json" "installed at ${HISPOWERD_CFG_DIR}/hispowerd.json"
+    else
+      status_line SKIP "hispowerd.json" "already exists"
+    fi
+  fi
+
+  # Install fast-path nftables file.
+  if [[ -f "${FAST_NFT_SRC}" ]]; then
+    if sudo install -m 0640 -o root -g root "${FAST_NFT_SRC}" "/etc/nftables/hisnos-gaming-fast.nft" 2>/dev/null; then
+      status_line OK "hisnos-gaming-fast.nft" "installed to /etc/nftables/"
+    else
+      warn "Failed to install hisnos-gaming-fast.nft — fast path firewall unavailable"
+    fi
+  else
+    warn "gaming/nftables/hisnos-gaming-fast.nft not found"
+  fi
+
+  # Install recovery script.
+  if [[ -f "${HISPOWERD_RECOVER_SRC}" ]]; then
+    install -m 0755 "${HISPOWERD_RECOVER_SRC}" "${USER_DATA_BASE}/bin/hisnos-hispowerd-recover"
+    status_line OK "hisnos-hispowerd-recover" "installed to ${USER_DATA_BASE}/bin/"
+  else
+    warn "gaming/hisnos-hispowerd-recover.sh not found"
+  fi
+
+  # Install and enable user service.
+  if [[ -f "${HISPOWERD_UNIT_SRC}" ]] && [[ -f "${HISPOWERD_BIN}" ]]; then
+    install -m 0644 "${HISPOWERD_UNIT_SRC}" "${USER_CONFIG_USER_SYSTEMD}/hisnos-hispowerd.service"
+    if systemctl --user daemon-reload 2>/dev/null \
+        && systemctl --user enable --now hisnos-hispowerd.service &>/dev/null; then
+      status_line OK "hisnos-hispowerd.service" "enabled and started"
+    else
+      warn "hisnos-hispowerd.service failed to start (non-fatal). Check: journalctl --user -u hisnos-hispowerd"
+    fi
+  else
+    status_line SKIP "hisnos-hispowerd.service" "binary or unit not found"
+  fi
+
+  status_line OK "hispowerd" "gaming performance runtime installed"
+
   # Step 10: Kernel validation (warn only; never abort)
   CURRENT_STEP="Kernel validation"
   section "Kernel validation"
@@ -990,6 +1083,438 @@ UIWRAP_EOF
   fi
 
   status_line OK "Command Center" "searchd=${searchd_ok} — press SUPER+SPACE after login to invoke"
+
+  # Step 13: Distribution Experience Layer
+  CURRENT_STEP="Distribution Experience"
+  section "Distribution Experience (Plymouth + Onboarding + Recovery)"
+
+  # 13a. Plymouth theme
+  local PLYMOUTH_SRC="${REPO_DIR}/plymouth"
+  local PLYMOUTH_INSTALL="${PLYMOUTH_SRC}/install-theme.sh"
+
+  if [[ -f "${PLYMOUTH_INSTALL}" ]]; then
+    if sudo bash "${PLYMOUTH_INSTALL}" 2>/dev/null; then
+      status_line OK "Plymouth theme" "hisnos theme installed and set as default"
+    else
+      warn "Plymouth theme install failed — boot splash will use default theme (non-fatal)"
+    fi
+  else
+    warn "plymouth/install-theme.sh not found — Plymouth theme not installed"
+  fi
+
+  # 13b. Build and install the onboarding Go binary
+  local ONBOARDING_SRC="${REPO_DIR}/onboarding/backend"
+  local ONBOARDING_BIN="/usr/local/bin/hisnos-onboarding"
+  local ONBOARDING_UNIT_SRC="${REPO_DIR}/onboarding/systemd/hisnos-onboarding.service"
+  local ONBOARDING_USER_UNIT_DST="/usr/lib/systemd/user/hisnos-onboarding.service"
+  local ONBOARDING_STATE="/var/lib/hisnos/onboarding-state.json"
+
+  if [[ "${HISNOS_DISABLE_DASHBOARD_BUILD:-0}" == "1" ]]; then
+    status_line SKIP "onboarding binary build" "HISNOS_DISABLE_DASHBOARD_BUILD=1"
+  elif ! command -v go &>/dev/null; then
+    warn "Go not found — onboarding wizard not built. Install Go and re-run bootstrap."
+  elif [[ ! -d "${ONBOARDING_SRC}" ]]; then
+    warn "onboarding/backend/ not found — onboarding wizard not installed"
+  else
+    # Build SvelteKit frontend first (if npm is available and dist/ is absent).
+    local FRONTEND_SRC="${REPO_DIR}/onboarding/frontend"
+    local DIST_DIR="${ONBOARDING_SRC}/dist"
+    if [[ ! -d "${DIST_DIR}" ]]; then
+      if command -v npm &>/dev/null && [[ -f "${FRONTEND_SRC}/package.json" ]]; then
+        (
+          cd "${FRONTEND_SRC}"
+          npm install --silent 2>/dev/null || true
+          npm run build 2>/dev/null || true
+        )
+        if [[ -d "${DIST_DIR}" ]]; then
+          status_line OK "onboarding frontend" "SvelteKit built to ${DIST_DIR}"
+        else
+          warn "SvelteKit build did not produce dist/ — onboarding UI will be absent"
+        fi
+      else
+        warn "npm not found and dist/ absent — install Node.js and run: cd onboarding/frontend && npm install && npm run build"
+      fi
+    else
+      status_line SKIP "onboarding frontend build" "dist/ already present"
+    fi
+
+    # Build Go binary (embeds dist/).
+    if (cd "${ONBOARDING_SRC}" && go build -o /tmp/hisnos-onboarding .); then
+      sudo install -m 0755 /tmp/hisnos-onboarding "${ONBOARDING_BIN}"
+      rm -f /tmp/hisnos-onboarding
+      status_line OK "onboarding binary" "${ONBOARDING_BIN}"
+    else
+      warn "onboarding go build failed — wizard unavailable (non-fatal)"
+    fi
+  fi
+
+  # 13c. Install and (conditionally) enable the onboarding user service.
+  if [[ -f "${ONBOARDING_UNIT_SRC}" ]]; then
+    if sudo install -m 0644 "${ONBOARDING_UNIT_SRC}" "${ONBOARDING_USER_UNIT_DST}" 2>/dev/null; then
+      status_line OK "hisnos-onboarding.service" "installed to ${ONBOARDING_USER_UNIT_DST}"
+      # Only enable the service if onboarding has not already been completed.
+      if [[ ! -f "${ONBOARDING_STATE}" ]]; then
+        # Enable for all users via the preset mechanism.
+        sudo systemctl --global enable hisnos-onboarding.service 2>/dev/null || true
+        status_line OK "hisnos-onboarding.service" "globally enabled (runs on first graphical login)"
+      else
+        status_line SKIP "hisnos-onboarding.service" "onboarding already complete"
+      fi
+    else
+      warn "Failed to install hisnos-onboarding.service (may need rpm-ostree overlay for /usr/lib/systemd/user)"
+    fi
+  fi
+
+  # 13d. Install GRUB recovery entry and dracut module.
+  local RECOVERY_SETUP="${REPO_DIR}/recovery/hisnos-recovery-setup.sh"
+  if [[ -f "${RECOVERY_SETUP}" ]]; then
+    if sudo bash "${RECOVERY_SETUP}" 2>/dev/null; then
+      status_line OK "Recovery entry" "GRUB recovery menu entry installed"
+    else
+      warn "Recovery entry setup failed — run manually: sudo bash recovery/hisnos-recovery-setup.sh"
+    fi
+  else
+    warn "recovery/hisnos-recovery-setup.sh not found — recovery entry not installed"
+  fi
+
+  status_line OK "Distribution Experience" "Plymouth + onboarding wizard + recovery entry complete"
+
+  # Step 14: Distribution Finalization
+  CURRENT_STEP="Distribution Finalization"
+  section "Distribution Finalization (boot health + indicator + version + cmdline)"
+
+  # 14a. Install boot health script and service.
+  local BOOT_HEALTH_SCRIPT="${REPO_DIR}/boot/hisnos-boot-health.sh"
+  local BOOT_HEALTH_UNIT="${REPO_DIR}/boot/systemd/hisnos-boot-health.service"
+  local BOOT_LIB_DIR="/usr/local/lib/hisnos"
+
+  if sudo mkdir -p "${BOOT_LIB_DIR}" 2>/dev/null; then
+    if [[ -f "${BOOT_HEALTH_SCRIPT}" ]]; then
+      sudo install -m 0755 "${BOOT_HEALTH_SCRIPT}" "${BOOT_LIB_DIR}/hisnos-boot-health.sh"
+      status_line OK "hisnos-boot-health.sh" "installed to ${BOOT_LIB_DIR}"
+    fi
+    if [[ -f "${BOOT_HEALTH_UNIT}" ]]; then
+      sudo install -m 0644 "${BOOT_HEALTH_UNIT}" "/usr/lib/systemd/system/hisnos-boot-health.service"
+      if sudo systemctl daemon-reload 2>/dev/null && sudo systemctl enable hisnos-boot-health.service 2>/dev/null; then
+        status_line OK "hisnos-boot-health.service" "enabled (runs on every boot)"
+      else
+        warn "hisnos-boot-health.service failed to enable (non-fatal)"
+      fi
+    fi
+  fi
+
+  # 14b. Validate kernel cmdline (warn only; --fix not applied automatically).
+  local CMDLINE_SCRIPT="${REPO_DIR}/boot/validate-kernel-cmdline.sh"
+  if [[ -f "${CMDLINE_SCRIPT}" ]]; then
+    if bash "${CMDLINE_SCRIPT}" 2>/dev/null; then
+      status_line OK "kernel cmdline" "required flags present"
+    else
+      warn "Kernel cmdline missing HisnOS flags. Run: sudo bash boot/validate-kernel-cmdline.sh --fix"
+      warn "Required: quiet splash loglevel=3 rd.systemd.show_status=false"
+    fi
+  fi
+
+  # 14c. Install status indicator.
+  local INDICATOR_SRC="${REPO_DIR}/desktop/hisnos-status-indicator.py"
+  local INDICATOR_BIN="/usr/local/bin/hisnos-status-indicator"
+  local INDICATOR_UNIT_SRC="${REPO_DIR}/desktop/systemd/hisnos-status-indicator.service"
+  local AUTOSTART_INDICATOR="${REPO_DIR}/desktop/autostart/hisnos-status-indicator.desktop"
+  local AUTOSTART_SEARCH="${REPO_DIR}/desktop/autostart/hisnos-search-ui.desktop"
+  local XDG_AUTOSTART_DIR="/etc/xdg/autostart"
+
+  if [[ -f "${INDICATOR_SRC}" ]]; then
+    sudo install -m 0755 "${INDICATOR_SRC}" "${INDICATOR_BIN}"
+    status_line OK "hisnos-status-indicator" "${INDICATOR_BIN}"
+  fi
+
+  if [[ -f "${INDICATOR_UNIT_SRC}" ]]; then
+    sudo install -m 0644 "${INDICATOR_UNIT_SRC}" "/usr/lib/systemd/user/hisnos-status-indicator.service"
+    # Enable globally so it starts for every user's graphical session.
+    sudo systemctl --global enable hisnos-status-indicator.service 2>/dev/null || \
+      warn "Failed to globally enable hisnos-status-indicator.service"
+  fi
+
+  # Install XDG autostart entries (fallback for non-systemd session managers).
+  if sudo mkdir -p "${XDG_AUTOSTART_DIR}" 2>/dev/null; then
+    for desktop_file in "${AUTOSTART_INDICATOR}" "${AUTOSTART_SEARCH}"; do
+      [[ -f "${desktop_file}" ]] && \
+        sudo install -m 0644 "${desktop_file}" "${XDG_AUTOSTART_DIR}/" && \
+        status_line OK "autostart: $(basename "${desktop_file}")" "${XDG_AUTOSTART_DIR}/"
+    done
+  fi
+
+  # 14d. Install version file and CLI.
+  local VERSION_INSTALL="${REPO_DIR}/release/install-version.sh"
+  if [[ -f "${VERSION_INSTALL}" ]]; then
+    if sudo bash "${VERSION_INSTALL}" 2>/dev/null; then
+      status_line OK "hisnos-version" "$(hisnos-version --short 2>/dev/null || echo 'installed')"
+    else
+      warn "Failed to install version file (non-fatal)"
+    fi
+  fi
+
+  status_line OK "Distribution Finalization" "boot health + status indicator + version + cmdline validated"
+
+  # Step 15: Phase 15 Production — Performance, Automation, Ecosystem
+  CURRENT_STEP="Phase 15 Production"
+  section "Phase 15 — Performance Runtime + Automation + Ecosystem"
+  step15_phase15_production
+
+  # Step 16: Build Pipeline — dracut module, systemd units, nftables ruleset,
+  #           hisnos-pkg CLI, Phase A-D service units.
+  CURRENT_STEP="Build Pipeline"
+  section "Step 16 — Production Build Pipeline + Phase A-D Services"
+  step16_build_pipeline
+}
+
+# ─── Step 15: Performance + Automation + Ecosystem ───────────────────────────
+step15_phase15_production() {
+  log "=== Step 15: Phase 15 — Performance, Automation & Ecosystem ==="
+
+  # 15a. Install hisnos-perf-apply helper.
+  local PERF_APPLY_SRC="${REPO_DIR}/core/performance/hisnos-perf-apply.sh"
+  local PERF_APPLY_BIN="/usr/local/bin/hisnos-perf-apply"
+  if [[ -f "${PERF_APPLY_SRC}" ]]; then
+    sudo install -m 0755 "${PERF_APPLY_SRC}" "${PERF_APPLY_BIN}"
+    status_line OK "hisnos-perf-apply" "${PERF_APPLY_BIN}"
+  else
+    warn "hisnos-perf-apply.sh not found — skipping"
+  fi
+
+  # 15b. Install hisnos-performance.service (user unit, global).
+  local PERF_UNIT="${REPO_DIR}/core/performance/systemd/hisnos-performance.service"
+  if [[ -f "${PERF_UNIT}" ]]; then
+    sudo install -m 0644 "${PERF_UNIT}" "/usr/lib/systemd/user/hisnos-performance.service"
+    sudo systemctl --global enable hisnos-performance.service 2>/dev/null || \
+      warn "Failed to globally enable hisnos-performance.service (non-fatal)"
+    status_line OK "hisnos-performance.service" "installed + globally enabled"
+  fi
+
+  # 15c. Install update-check timer + service (system units).
+  for unit_src in \
+    "${REPO_DIR}/core/ecosystem/systemd/hisnos-update-check.service" \
+    "${REPO_DIR}/core/ecosystem/systemd/hisnos-update-check.timer"; do
+    [[ -f "${unit_src}" ]] && \
+      sudo install -m 0644 "${unit_src}" "/usr/lib/systemd/system/$(basename "${unit_src}")"
+  done
+  if sudo systemctl enable --now hisnos-update-check.timer 2>/dev/null; then
+    status_line OK "hisnos-update-check.timer" "enabled (weekly, persistent)"
+  else
+    warn "Failed to enable hisnos-update-check.timer (non-fatal)"
+  fi
+
+  # 15d. Create required state directories.
+  for dir in /var/lib/hisnos/forensics /var/log/hisnos /etc/hisnos; do
+    sudo mkdir -p "${dir}" && sudo chmod 0750 "${dir}" 2>/dev/null || true
+  done
+  status_line OK "state dirs" "/var/lib/hisnos/* /var/log/hisnos /etc/hisnos"
+
+  # 15e. Write default telemetry config (opt-in, disabled by default).
+  local TELEMETRY_CONF="/etc/hisnos/telemetry.conf"
+  if [[ ! -f "${TELEMETRY_CONF}" ]]; then
+    sudo tee "${TELEMETRY_CONF}" > /dev/null <<'TELEOF'
+# HisnOS Telemetry Configuration
+# Set enabled=true to opt in to anonymous usage telemetry.
+# Set endpoint=https://... to configure the collection endpoint.
+# Default: disabled. No data is collected or transmitted by default.
+enabled=false
+# endpoint=https://telemetry.hisnos.example/ingest
+TELEOF
+    status_line OK "telemetry.conf" "${TELEMETRY_CONF} (disabled)"
+  fi
+
+  # 15f. Initialise JSON state files with safe defaults (idempotent).
+  local PERF_STATE="/var/lib/hisnos/perf-state.json"
+  if [[ ! -f "${PERF_STATE}" ]]; then
+    sudo tee "${PERF_STATE}" > /dev/null \
+      <<< "{\"active_profile\":\"balanced\",\"applied_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+    status_line OK "perf-state.json" "initialised (balanced)"
+  fi
+
+  local AUTO_STATE="/var/lib/hisnos/automation-state.json"
+  if [[ ! -f "${AUTO_STATE}" ]]; then
+    sudo tee "${AUTO_STATE}" > /dev/null \
+      <<< "{\"alert_threshold\":70.0,\"false_positives\":0,\"confirmed_alerts\":0,\"last_adjustment\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"override_cooldown_until\":\"2000-01-01T00:00:00Z\",\"incidents\":[]}"
+    status_line OK "automation-state.json" "initialised (threshold=70)"
+  fi
+
+  local REG_FILE="/var/lib/hisnos/module-registry.json"
+  if [[ ! -f "${REG_FILE}" ]]; then
+    sudo tee "${REG_FILE}" > /dev/null \
+      <<< "{\"modules\":[],\"updated_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+    status_line OK "module-registry.json" "initialised (empty)"
+  fi
+
+  # 15g. Rebuild hisnosd binary if Go toolchain is available.
+  if command -v go &>/dev/null; then
+    log "Building hisnosd (Phase 15)..."
+    if (cd "${REPO_DIR}/core" && go build -o /tmp/hisnosd . 2>&1 | tee /tmp/hisnosd-build.log); then
+      sudo install -m 0755 /tmp/hisnosd /usr/local/bin/hisnosd
+      rm -f /tmp/hisnosd
+      status_line OK "hisnosd" "rebuilt with Phase 15 packages"
+    else
+      warn "hisnosd build failed — see /tmp/hisnosd-build.log"
+    fi
+  else
+    warn "Go toolchain not found — hisnosd not rebuilt (run: sudo dnf install golang)"
+  fi
+
+  status_line OK "Phase 15" "Performance + Automation + Ecosystem installed"
+}
+
+# ─── Step 16: Build Pipeline + Phase A-D Services ─────────────────────────────
+step16_build_pipeline() {
+  log "=== Step 16: Build Pipeline + Phase A-D Services ==="
+
+  # 16a. Install nftables base ruleset.
+  local NFT_SRC="${REPO_DIR}/security/nftables-base.nft"
+  local NFT_DST="/etc/nftables.conf"
+  if [[ -f "${NFT_SRC}" ]]; then
+    # Back up any existing ruleset first.
+    if [[ -f "${NFT_DST}" ]]; then
+      sudo cp "${NFT_DST}" "${NFT_DST}.bak.$(date +%Y%m%d-%H%M%S)"
+    fi
+    sudo install -m 0640 "${NFT_SRC}" "${NFT_DST}"
+    sudo chown root:root "${NFT_DST}"
+    status_line OK "nftables-base.nft" "${NFT_DST} (backup retained)"
+
+    # Validate the ruleset syntax (dry-run — does not modify kernel state).
+    if nft --check -f "${NFT_DST}" 2>/dev/null; then
+      status_line OK "nftables syntax" "OK"
+    else
+      warn "nftables ruleset syntax check failed — inspect ${NFT_DST}"
+    fi
+
+    # Enable nftables.service so the ruleset loads at boot.
+    if sudo systemctl enable nftables.service 2>/dev/null; then
+      status_line OK "nftables.service" "enabled"
+    fi
+  else
+    warn "nftables-base.nft not found at ${NFT_SRC}"
+  fi
+
+  # 16b. Install dracut module for boot reliability.
+  local DRACUT_INSTALL="${REPO_DIR}/dracut/install-dracut-module.sh"
+  if [[ -f "${DRACUT_INSTALL}" ]]; then
+    if sudo bash "${DRACUT_INSTALL}" --no-rebuild; then
+      status_line OK "dracut-95hisnos" "module installed (initramfs rebuild deferred)"
+      # Schedule a rebuild on next boot via a transient systemd unit.
+      sudo systemd-run --unit=hisnos-initramfs-rebuild \
+        --description="HisnOS initramfs rebuild (one-shot)" \
+        --on-boot=30 \
+        dracut --force --add "95hisnos" --kernel-version "$(uname -r)" 2>/dev/null || \
+        warn "Could not schedule initramfs rebuild — run: sudo dracut --force --add 95hisnos"
+    else
+      warn "Dracut module install failed (non-fatal)"
+    fi
+  else
+    warn "install-dracut-module.sh not found — skipping dracut module install"
+  fi
+
+  # 16c. Install Phase A-D systemd service units.
+  #      These units are managed by hisnosd (via hisnosd --module <name>).
+  local SYSTEMD_DIR="/usr/lib/systemd/system"
+  local UNIT_DIRS=(
+    "${REPO_DIR}/systemd"
+    "${REPO_DIR}/core/performance/systemd"
+    "${REPO_DIR}/core/fleet/systemd"
+  )
+
+  local installed_units=0
+  for unit_dir in "${UNIT_DIRS[@]}"; do
+    if [[ -d "${unit_dir}" ]]; then
+      for unit_file in "${unit_dir}"/*.service "${unit_dir}"/*.timer; do
+        [[ -f "${unit_file}" ]] || continue
+        local unit_name
+        unit_name="$(basename "${unit_file}")"
+        sudo install -m 0644 "${unit_file}" "${SYSTEMD_DIR}/${unit_name}"
+        (( installed_units++ ))
+      done
+    fi
+  done
+
+  if [[ "${installed_units}" -gt 0 ]]; then
+    sudo systemctl daemon-reload
+    status_line OK "systemd units" "${installed_units} units installed + daemon-reload"
+  fi
+
+  # Enable Phase A-D system services (non-gaming, always active).
+  local ALWAYS_ON_UNITS=(
+    "hisnos-threat-engine.service"
+    "hisnos-automation.service"
+    "hisnos-performance-guard.service"
+    "hisnos-fleet-sync.timer"
+    "hisnos-boot-complete.service"
+  )
+  for unit in "${ALWAYS_ON_UNITS[@]}"; do
+    if [[ -f "${SYSTEMD_DIR}/${unit}" ]]; then
+      if sudo systemctl enable "${unit}" 2>/dev/null; then
+        status_line OK "${unit}" "enabled"
+      else
+        warn "Failed to enable ${unit} (will start with hisnosd)"
+      fi
+    fi
+  done
+
+  # 16d. Install hisnos-pkg marketplace CLI.
+  if command -v go &>/dev/null; then
+    local PKG_CLI_DIR="${REPO_DIR}/cmd/hisnos-pkg"
+    if [[ -d "${PKG_CLI_DIR}" ]]; then
+      log "Building hisnos-pkg CLI..."
+      if (cd "${REPO_DIR}/core" && go build -o /tmp/hisnos-pkg ./cmd/hisnos-pkg/ 2>&1); then
+        sudo install -m 0755 /tmp/hisnos-pkg /usr/local/bin/hisnos-pkg
+        rm -f /tmp/hisnos-pkg
+        status_line OK "hisnos-pkg" "/usr/local/bin/hisnos-pkg"
+      else
+        warn "hisnos-pkg build failed — marketplace CLI unavailable"
+      fi
+    fi
+  else
+    warn "Go toolchain not found — hisnos-pkg not built"
+  fi
+
+  # 16e. Rebuild hisnosd with Phase A-D packages.
+  if command -v go &>/dev/null; then
+    log "Rebuilding hisnosd with Phase A-D packages..."
+    if (cd "${REPO_DIR}/core" && go build -o /tmp/hisnosd . 2>&1 | tee /tmp/hisnosd-build-p16.log); then
+      sudo install -m 0755 /tmp/hisnosd /usr/local/bin/hisnosd
+      rm -f /tmp/hisnosd
+      status_line OK "hisnosd" "rebuilt with Phase A-D packages"
+    else
+      warn "hisnosd build failed — see /tmp/hisnosd-build-p16.log"
+      warn "Existing binary retained; Phase A-D features will be active after rebuild"
+    fi
+  fi
+
+  # 16f. Initialise Phase A-D state files.
+  local STATE_INIT_FILES=(
+    "/var/lib/hisnos/boot-health.json:{\"ring\":[null,null,null,null,null,null,null],\"head\":0,\"full\":false}"
+    "/var/lib/hisnos/deployment-graph.json:{\"nodes\":[]}"
+    "/var/lib/hisnos/fleet-identity.json:{}"
+    "/var/lib/hisnos/automation-baseline.json:{\"phase\":\"learning\",\"samples\":0,\"mean\":{},\"m2\":{}}"
+    "/var/lib/hisnos/automation-confidence.json:{\"history\":{}}"
+  )
+  for entry in "${STATE_INIT_FILES[@]}"; do
+    local path="${entry%%:*}"
+    local content="${entry#*:}"
+    if [[ ! -f "${path}" ]]; then
+      echo "${content}" | sudo tee "${path}" > /dev/null
+      sudo chmod 0640 "${path}"
+      status_line OK "$(basename "${path}")" "initialised"
+    fi
+  done
+
+  # 16g. Validate OSTRee build tooling (informational only).
+  local COMPOSE_SCRIPT="${REPO_DIR}/build/ostree/compose.sh"
+  if [[ -f "${COMPOSE_SCRIPT}" ]]; then
+    status_line OK "OSTree compose" "${COMPOSE_SCRIPT} (run manually on build host)"
+  fi
+  local ISO_SCRIPT="${REPO_DIR}/build/iso/build-hisnos-iso.sh"
+  if [[ -f "${ISO_SCRIPT}" ]]; then
+    status_line OK "ISO pipeline" "${ISO_SCRIPT} (run on build host with lorax)"
+  fi
+
+  status_line OK "Step 16" "Build Pipeline + Phase A-D Services installed"
 }
 
 main "$@"

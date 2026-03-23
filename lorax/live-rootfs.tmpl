@@ -1,0 +1,19 @@
+<%page args="root, outroot"/>
+## lorax/live-rootfs.tmpl
+## Highly isolated HisnOS Lorax template to build the precise ISO without external bloat or Anaconda
+
+mkdir ${outroot}/LiveOS
+runcmd mksquashfs ${root} ${outroot}/LiveOS/squashfs.img -comp xz -b 1M -Xdict-size 100% -noappend
+
+mkdir ${outroot}/isolinux
+install ${configdir}/isolinux.cfg ${outroot}/isolinux/isolinux.cfg
+
+## Inject the dracut initramfs built by the pipeline
+runcmd cp /tmp/initramfs-hisnos.img ${outroot}/isolinux/initramfs.img
+
+## Find kernel and copy
+runcmd find ${root}/lib/modules -maxdepth 1 -mindepth 1 -type d -exec cp {}/vmlinuz ${outroot}/isolinux/vmlinuz \;
+
+## EFI
+mkdir -p ${outroot}/EFI/BOOT
+install ${configdir}/grub-hisnos.cfg ${outroot}/EFI/BOOT/grub.cfg

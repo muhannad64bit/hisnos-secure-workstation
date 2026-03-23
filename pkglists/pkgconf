@@ -1,0 +1,17 @@
+/etc/pkgconfig
+/etc/pkgconfig/personality.d
+/usr/bin/pkgconf
+/usr/lib/.build-id
+/usr/lib/.build-id/fe
+/usr/lib/.build-id/fe/573dc6a0aea959544067e6b9dbd63da2a46009
+/usr/lib/rpm/macros.d/macros.pkgconf
+/usr/share/doc/pkgconf
+/usr/share/doc/pkgconf/AUTHORS
+/usr/share/doc/pkgconf/NEWS
+/usr/share/doc/pkgconf/README.md
+/usr/share/licenses/pkgconf
+/usr/share/licenses/pkgconf/COPYING
+/usr/share/man/man1/pkgconf.1.gz
+/usr/share/man/man5/pc.5.gz
+/usr/share/man/man5/pkgconf-personality.5.gz
+/usr/share/pkgconfig/personality.d

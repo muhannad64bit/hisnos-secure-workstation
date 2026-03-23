@@ -1,0 +1,16 @@
+[Unit]
+Description=HisnOS Boot Validation Gate
+DefaultDependencies=no
+Requires=sysinit.target dbus.service
+After=sysinit.target dbus.service
+Before=graphical.target display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hisnos-boot-validator.sh
+TimeoutStartSec=15
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=graphical.target

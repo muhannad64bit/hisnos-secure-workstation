@@ -1,0 +1,50 @@
+[Unit]
+Description=HisnOS Real-Time Priority Guard
+Documentation=https://hisnos.dev/docs/rt-guard
+After=hisnosd.service
+BindsTo=hisnosd.service
+ConditionPathExists=/proc/sys/kernel/sched_rt_runtime_us
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+# HARDENED: Type=idle — RT guard only when system is idle.
+Type=idle
+ExecStart=/usr/local/bin/hisnosd --module rt-guard
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=3
+StartLimitIntervalSec=120
+TimeoutStartSec=10
+TimeoutStopSec=10
+
+# Root required: /proc/<pid>/stat reads + chrt writes.
+User=root
+Group=root
+
+# Resource limits — lightweight scanning loop.
+Nice=10
+CPUWeight=10
+CPUQuota=3%
+MemoryMax=16M
+TasksMax=4
+
+# Hardening.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=no
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+SystemCallFilter=@system-service @privileged
+CapabilityBoundingSet=CAP_SYS_NICE CAP_KILL
+AmbientCapabilities=CAP_SYS_NICE CAP_KILL
+
+[Install]
+# HARDENED: RT guard activates post-login only.
+WantedBy=graphical.target

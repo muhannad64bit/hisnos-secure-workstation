@@ -1,0 +1,11 @@
+/etc/egl
+/etc/egl/egl_external_platform.d
+/etc/glvnd/egl_vendor.d
+/usr/lib/.build-id
+/usr/lib/.build-id/64
+/usr/lib/.build-id/64/b21ea7a0f2218d1657fb6722b276a994067a6a
+/usr/lib64/libEGL.so.1
+/usr/lib64/libEGL.so.1.1.0
+/usr/share/egl
+/usr/share/egl/egl_external_platform.d
+/usr/share/glvnd/egl_vendor.d

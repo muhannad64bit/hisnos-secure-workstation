@@ -1,0 +1,7 @@
+/etc/logrotate.d/iscsiuiolog
+/usr/bin/iscsiuio
+/usr/lib/.build-id
+/usr/lib/.build-id/27/16095f4cf5f4d81ec662cd0981c9b7b6da0743
+/usr/lib/systemd/system/iscsiuio.service
+/usr/lib/systemd/system/iscsiuio.socket
+/usr/share/man/man8/iscsiuio.8.gz

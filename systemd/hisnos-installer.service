@@ -1,0 +1,61 @@
+[Unit]
+Description=HisnOS Live Installer Launcher
+Documentation=https://hisnos.dev/docs/installer
+# Start after the graphical environment is ready and live health confirmed.
+After=graphical.target hisnos-live-health.service display-manager.service
+Requires=hisnos-live-health.service
+# Hard gate: installer MUST NOT start if health check failed.
+ConditionPathExists=/run/hisnos-live-ok
+# Only on live boots.
+ConditionKernelCommandLine=hisnos.live=1
+
+[Service]
+MemoryMax=300M
+MemoryHigh=250M
+MemorySwapMax=0
+TasksMax=200
+ManagedOOMSwap=kill
+ManagedOOMMemoryPressure=kill
+Type=simple
+# Give the desktop 10 seconds to settle before launching the installer.
+ExecStartPre=/bin/sleep 10
+# Verify the health gate is still present (race-condition guard).
+ExecStartPre=/bin/sh -c 'test -f /run/hisnos-live-ok || \
+    { echo "hisnos-installer: /run/hisnos-live-ok missing — aborting" >&2; exit 1; }'
+# Log the launch event with full context.
+ExecStartPre=/bin/sh -c '\
+    echo "hisnos-installer: starting installer"; \
+    echo "  DISPLAY=${DISPLAY}"; \
+    echo "  WAYLAND_DISPLAY=${WAYLAND_DISPLAY}"; \
+    echo "  XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}"; \
+    test -f /etc/hisnos/live-boot-state && \
+        echo "  $(grep HISNOS_SOURCE_DEV /etc/hisnos/live-boot-state || true)"'
+# Launch the installer.
+# Supports Calamares (preferred), Anaconda Web UI, or a fallback CLI installer.
+ExecStart=/bin/sh -c '\
+    if command -v calamares >/dev/null 2>&1; then \
+        exec calamares; \
+    elif command -v anaconda >/dev/null 2>&1; then \
+        exec anaconda --graphical; \
+    elif test -x /usr/bin/hisnos-install; then \
+        exec /usr/bin/hisnos-install --gui; \
+    else \
+        exec /usr/bin/hisnos-install-tui; \
+    fi'
+
+Restart=on-failure
+RestartSec=5
+# Limit restart attempts — if installer crashes 3 times, stop trying.
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-installer
+
+# Retain display environment.
+Environment=DISPLAY=:0
+PassEnvironment=DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
+
+[Install]
+WantedBy=graphical.target

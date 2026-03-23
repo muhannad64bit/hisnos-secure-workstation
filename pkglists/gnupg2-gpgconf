@@ -1,0 +1,14 @@
+/etc/gnupg
+/etc/gnupg/gpgconf.conf
+/usr/bin/gpg-connect-agent
+/usr/bin/gpgconf
+/usr/lib/.build-id
+/usr/lib/.build-id/27
+/usr/lib/.build-id/27/50c0bbe611efbdbb9997909563c942f74956c7
+/usr/lib/.build-id/27/7a3ac06ecd54946cba3eda454ec61850138ed7
+/usr/share/gnupg
+/usr/share/gnupg/distsigkey.gpg
+/usr/share/licenses/gnupg2-gpgconf
+/usr/share/licenses/gnupg2-gpgconf/COPYING
+/usr/share/man/man1/gpg-connect-agent.1.gz
+/usr/share/man/man1/gpgconf.1.gz

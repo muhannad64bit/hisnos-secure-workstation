@@ -1,0 +1,52 @@
+[Unit]
+Description=HisnOS Thermal and Power Feedback Controller
+Documentation=https://hisnos.dev/docs/thermal
+After=hisnosd.service
+BindsTo=hisnosd.service
+ConditionPathExists=/sys/class/hwmon
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+# HARDENED: Type=idle — thermal feedback only when system is idle.
+Type=idle
+ExecStart=/usr/local/bin/hisnosd --module thermal-controller
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=120
+TimeoutStartSec=15
+TimeoutStopSec=10
+
+# Root required for cgroup v2 cpu.max writes.
+User=root
+Group=root
+
+# Resource limits.
+Nice=10
+CPUWeight=10
+CPUQuota=2%
+MemoryMax=16M
+TasksMax=4
+
+# Hardening.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=no
+ProtectKernelModules=yes
+ProtectControlGroups=no
+ReadWritePaths=/sys/fs/cgroup/system.slice/hisnosd.service
+ReadOnlyPaths=/sys/class/hwmon /sys/devices/system/cpu
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+SystemCallFilter=@system-service
+CapabilityBoundingSet=CAP_SYS_ADMIN
+AmbientCapabilities=CAP_SYS_ADMIN
+
+[Install]
+# HARDENED: thermal control activates post-login only.
+WantedBy=graphical.target

@@ -1,0 +1,7 @@
+/etc/fonts/conf.d/65-0-madan-fonts.conf
+/usr/share/fontconfig/conf.avail/65-0-madan-fonts.conf
+/usr/share/fonts/madan-fonts
+/usr/share/fonts/madan-fonts/madan.ttf
+/usr/share/licenses/madan-fonts
+/usr/share/licenses/madan-fonts/license.txt
+/usr/share/metainfo/org.fedoraproject.madan-fonts.metainfo.xml

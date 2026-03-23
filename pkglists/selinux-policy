@@ -1,0 +1,12 @@
+/etc/selinux
+/etc/selinux/config
+/etc/sysconfig/selinux
+/usr/lib/rpm/macros.d/macros.selinux-policy
+/usr/lib/systemd/system/selinux-check-proper-disable.service
+/usr/lib/tmpfiles.d/selinux-policy.conf
+/usr/libexec/selinux/binsbin-convert.sh
+/usr/libexec/selinux/varrun-convert.sh
+/usr/share/licenses/selinux-policy
+/usr/share/licenses/selinux-policy/COPYING
+/usr/share/selinux
+/usr/share/selinux/packages

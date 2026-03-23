@@ -1,0 +1,12 @@
+/etc/selinux
+/etc/selinux/semanage.conf
+/usr/lib/.build-id
+/usr/lib/.build-id/cf
+/usr/lib/.build-id/cf/c145162bf9dd8f55bea5e1cd4138c2f6b79e75
+/usr/lib64/libsemanage.so.2
+/usr/libexec/selinux
+/usr/share/licenses/libsemanage
+/usr/share/licenses/libsemanage/LICENSE
+/usr/share/man/man5/semanage.conf.5.gz
+/var/lib/selinux
+/var/lib/selinux/tmp

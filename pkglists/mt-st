@@ -1,0 +1,17 @@
+/usr/bin/mt
+/usr/bin/stinit
+/usr/lib/.build-id
+/usr/lib/.build-id/77
+/usr/lib/.build-id/77/86e741aebe684917a949b7d0c35caa76e8f3b9
+/usr/lib/.build-id/ac
+/usr/lib/.build-id/ac/38f2a27de06d59272c7ccca54fa88a1b500f65
+/usr/lib/systemd/system/stinit.service
+/usr/share/bash-completion
+/usr/share/bash-completion/completions
+/usr/share/bash-completion/completions/mt
+/usr/share/doc/mt-st
+/usr/share/doc/mt-st/COPYING
+/usr/share/doc/mt-st/README.md
+/usr/share/doc/mt-st/stinit.def.examples
+/usr/share/man/man1/mt.1.gz
+/usr/share/man/man8/stinit.8.gz

@@ -1,0 +1,17 @@
+/etc/fonts/conf.d/65-1-google-noto-sans-cjk-fonts.conf
+/etc/fonts/conf.d/65-google-noto-sans-cjk-fonts.conf
+/etc/fonts/conf.d/65-google-noto-sans-cjk-mono-fonts.conf
+/usr/share/fontconfig/conf.avail/65-1-google-noto-sans-cjk-fonts.conf
+/usr/share/fontconfig/conf.avail/65-google-noto-sans-cjk-fonts.conf
+/usr/share/fontconfig/conf.avail/65-google-noto-sans-cjk-mono-fonts.conf
+/usr/share/fonts/google-noto-sans-cjk-fonts
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-Black.ttc
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-Bold.ttc
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-DemiLight.ttc
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-Light.ttc
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-Medium.ttc
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-Regular.ttc
+/usr/share/fonts/google-noto-sans-cjk-fonts/NotoSansCJK-Thin.ttc
+/usr/share/licenses/google-noto-sans-cjk-fonts
+/usr/share/licenses/google-noto-sans-cjk-fonts/LICENSE
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-cjk-fonts.metainfo.xml

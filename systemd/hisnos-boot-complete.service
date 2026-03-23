@@ -1,0 +1,48 @@
+[Unit]
+Description=HisnOS Boot Completion Handler
+Documentation=https://hisnos.dev/docs/boot
+# Run after the system is fully up and settled.
+# HARDENED: removed network-online.target — boot must not block on network.
+After=multi-user.target
+ConditionPathExists=/etc/hisnos/release
+
+[Service]
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+MemoryMax=300M
+MemoryHigh=250M
+MemorySwapMax=0
+TasksMax=200
+ManagedOOMSwap=kill
+ManagedOOMMemoryPressure=kill
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=120
+Type=oneshot
+RemainAfterExit=yes
+# Pass boot summary from dracut to hisnosd
+ExecStart=/bin/bash -c '\
+  SUMMARY=/run/hisnos/boot-summary.json; \
+  if [[ -f "$SUMMARY" ]]; then \
+    cat "$SUMMARY" | systemd-cat -t hisnos-boot; \
+    install -m0640 "$SUMMARY" /var/log/hisnos/boot-summary-$(date +%%Y%%m%%d-%%H%%M%%S).json 2>/dev/null || true; \
+  fi'
+
+# Update boot health score via hisnosd IPC (if socket available)
+ExecStartPost=/bin/bash -c '\
+  SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hisnosd.sock"; \
+  if [[ -S "$SOCK" ]]; then \
+    echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"record_boot_health\",\"params\":{}}" \
+      | socat - UNIX-CONNECT:"$SOCK" 2>/dev/null || true; \
+  fi'
+
+StandardOutput=journal
+StandardError=journal
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

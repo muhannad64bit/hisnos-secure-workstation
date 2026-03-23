@@ -1,0 +1,29 @@
+[Unit]
+Description=HisnOS Boot Health Logger
+Documentation=man:systemd-analyze(1)
+# Run after all core services have settled so failed unit count is accurate.
+After=multi-user.target network.target
+# Non-fatal: boot-health failure must never block the system.
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/local/lib/hisnos/hisnos-boot-health.sh
+
+# Run as root so it can read systemd state and write /var/lib/hisnos/.
+User=root
+Group=root
+
+# Tight resource limits — this is a one-shot logger.
+MemoryMax=32M
+CPUQuota=10%
+TimeoutStartSec=30
+
+# Keep output in the journal.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-boot-health
+
+[Install]
+WantedBy=multi-user.target

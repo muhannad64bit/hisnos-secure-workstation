@@ -1,0 +1,11 @@
+/boot/efi/EFI/fedora/grub.cfg
+/boot/efi/EFI/fedora/grubia32.efi
+/boot/grub2/fonts
+/boot/grub2/fonts/unicode.pf2
+/boot/grub2/grub.cfg
+/boot/grub2/grubenv
+/boot/loader/entries
+/etc/dnf/protected.d/grub2-efi-ia32.conf
+/etc/grub2-efi.cfg
+/etc/grub2.cfg
+/usr/bin/gen_grub_cfgstub

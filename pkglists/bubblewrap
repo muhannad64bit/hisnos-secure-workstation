@@ -1,0 +1,15 @@
+/usr/bin/bwrap
+/usr/lib/.build-id
+/usr/lib/.build-id/2a
+/usr/lib/.build-id/2a/24855f56b62fc4e24688e54093f5f81e274c98
+/usr/share/bash-completion
+/usr/share/bash-completion/completions
+/usr/share/bash-completion/completions/bwrap
+/usr/share/doc/bubblewrap
+/usr/share/doc/bubblewrap/README.md
+/usr/share/licenses/bubblewrap
+/usr/share/licenses/bubblewrap/COPYING
+/usr/share/man/man1/bwrap.1.gz
+/usr/share/zsh
+/usr/share/zsh/site-functions
+/usr/share/zsh/site-functions/_bwrap

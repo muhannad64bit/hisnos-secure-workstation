@@ -1,0 +1,14 @@
+/usr/lib/.build-id
+/usr/lib/.build-id/cf
+/usr/lib/.build-id/cf/c0c7fdf891e00ed77716ec35d1768204ed357a
+/usr/lib/dracut/modules.d/71prefixdevname
+/usr/lib/dracut/modules.d/71prefixdevname-tools
+/usr/lib/dracut/modules.d/71prefixdevname-tools/module-setup.sh
+/usr/lib/dracut/modules.d/71prefixdevname/module-setup.sh
+/usr/lib/udev/prefixdevname
+/usr/lib/udev/rules.d/71-prefixdevname.rules
+/usr/share/doc/prefixdevname
+/usr/share/doc/prefixdevname/README.md
+/usr/share/licenses/prefixdevname
+/usr/share/licenses/prefixdevname/LICENSE
+/usr/share/licenses/prefixdevname/LICENSE.dependencies

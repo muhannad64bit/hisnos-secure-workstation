@@ -1,0 +1,28 @@
+[Unit]
+Description=HisnOS Panic Detection and Auto-Rollback
+Documentation=https://hisnos.dev/docs/panic-rollback
+# Run early — before most services — to detect panics and rollback.
+After=local-fs.target
+Before=multi-user.target
+ConditionPathExists=/etc/hisnos/release
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /usr/local/lib/hisnos/hisnos-panic-rollback.sh
+# On clean shutdown, create the clean-shutdown marker.
+ExecStop=/bin/touch /var/lib/hisnos/.last-boot-clean
+
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+NoNewPrivileges=yes
+ProtectHome=yes
+MemoryMax=32M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hisnos-panic-rollback
+
+[Install]
+WantedBy=multi-user.target

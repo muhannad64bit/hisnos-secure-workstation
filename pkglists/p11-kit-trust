@@ -1,0 +1,12 @@
+/usr/bin/trust
+/usr/lib/.build-id
+/usr/lib/.build-id/0d
+/usr/lib/.build-id/0d/fe1c5a400d1a130354527c4c39bf1ee5d07cd4
+/usr/lib/.build-id/21
+/usr/lib/.build-id/21/86770b9f79b3f670b255b8d4fd7665f6102838
+/usr/lib64/libnssckbi.so
+/usr/lib64/pkcs11/p11-kit-trust.so
+/usr/libexec/p11-kit/trust-extract-compat
+/usr/share/bash-completion/completions/trust
+/usr/share/p11-kit/modules/p11-kit-trust.module
+/usr/share/zsh/site-functions/_trust

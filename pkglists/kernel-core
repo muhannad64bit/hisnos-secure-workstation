@@ -1,0 +1,17 @@
+/boot/.vmlinuz-6.17.1-300.fc43.x86_64.hmac
+/boot/System.map-6.17.1-300.fc43.x86_64
+/boot/config-6.17.1-300.fc43.x86_64
+/boot/initramfs-6.17.1-300.fc43.x86_64.img
+/boot/symvers-6.17.1-300.fc43.x86_64.xz
+/boot/vmlinuz-6.17.1-300.fc43.x86_64
+/lib/modules
+/lib/modules/6.17.1-300.fc43.x86_64
+/lib/modules/6.17.1-300.fc43.x86_64/.vmlinuz.hmac
+/lib/modules/6.17.1-300.fc43.x86_64/System.map
+/lib/modules/6.17.1-300.fc43.x86_64/config
+/lib/modules/6.17.1-300.fc43.x86_64/modules.builtin
+/lib/modules/6.17.1-300.fc43.x86_64/modules.builtin.modinfo
+/lib/modules/6.17.1-300.fc43.x86_64/symvers.xz
+/lib/modules/6.17.1-300.fc43.x86_64/vmlinuz
+/usr/share/licenses/kernel-core
+/usr/share/licenses/kernel-core/COPYING-6.17.1-300.fc43

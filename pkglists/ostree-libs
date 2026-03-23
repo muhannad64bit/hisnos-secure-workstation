@@ -1,0 +1,8 @@
+/etc/ostree
+/etc/ostree/remotes.d
+/usr/lib/.build-id
+/usr/lib/.build-id/cf
+/usr/lib/.build-id/cf/adaeb66d497ef81dd0f3cd413d0658414a0eb4
+/usr/lib64/girepository-1.0/OSTree-1.0.typelib
+/usr/lib64/libostree-1.so.1
+/usr/lib64/libostree-1.so.1.0.0

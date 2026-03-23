@@ -1,0 +1,15 @@
+[Unit]
+Description=HisnOS Realtime Health Watchdog
+After=multi-user.target
+Before=graphical.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/hisnos-watchdog.sh
+WatchdogSec=30
+OOMScoreAdjust=-1000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=HisnOS Fleet Policy Sync Timer
+Documentation=https://hisnos.dev/docs/fleet
+After=network-online.target
+
+[Timer]
+# HARDENED: 5min delay avoids competing with boot-time network setup.
+OnBootSec=5min
+OnUnitActiveSec=15min
+RandomizedDelaySec=2min
+Persistent=true
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,8 @@
+/run/setrans
+/usr/lib/.build-id
+/usr/lib/.build-id/ad
+/usr/lib/.build-id/ad/408e1cc7d4db8afbe50eeeca1cb8786f1c2ae5
+/usr/lib/tmpfiles.d/libselinux.conf
+/usr/lib64/libselinux.so.1
+/usr/share/licenses/libselinux
+/usr/share/licenses/libselinux/LICENSE

@@ -1,0 +1,16 @@
+/etc/sysconfig/rngd
+/usr/bin/rngd
+/usr/bin/rngtest
+/usr/lib/.build-id
+/usr/lib/.build-id/5e
+/usr/lib/.build-id/5e/f9a08d9e3fe10e437c6f5f0cec12bd705034fd
+/usr/lib/.build-id/cf
+/usr/lib/.build-id/cf/dfded9ff8ffba51a85544532556a1acbcb778a
+/usr/lib/systemd/system/rngd.service
+/usr/share/doc/rng-tools
+/usr/share/doc/rng-tools/AUTHORS
+/usr/share/doc/rng-tools/README.md
+/usr/share/licenses/rng-tools
+/usr/share/licenses/rng-tools/COPYING
+/usr/share/man/man1/rngtest.1.gz
+/usr/share/man/man8/rngd.8.gz

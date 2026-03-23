@@ -1,0 +1,7 @@
+/usr/bin/dmeventd
+/usr/lib/.build-id
+/usr/lib/.build-id/05
+/usr/lib/.build-id/05/e3fcf56e58d809f542f24d4f5be8deee833b94
+/usr/lib/systemd/system/dm-event.service
+/usr/lib/systemd/system/dm-event.socket
+/usr/share/man/man8/dmeventd.8.gz

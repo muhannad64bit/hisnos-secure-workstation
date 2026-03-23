@@ -1,0 +1,17 @@
+/etc/fonts/conf.d/65-sil-padauk-fonts.conf
+/usr/share/doc/sil-padauk-fonts
+/usr/share/doc/sil-padauk-fonts/FONTLOG.txt
+/usr/share/doc/sil-padauk-fonts/OFL-FAQ.txt
+/usr/share/doc/sil-padauk-fonts/OFL.txt
+/usr/share/doc/sil-padauk-fonts/README.txt
+/usr/share/doc/sil-padauk-fonts/documentation
+/usr/share/doc/sil-padauk-fonts/documentation/DOCUMENTATION.txt
+/usr/share/doc/sil-padauk-fonts/documentation/Padauk-features.odt
+/usr/share/doc/sil-padauk-fonts/documentation/Padauk-features.pdf
+/usr/share/doc/sil-padauk-fonts/documentation/Padauk-typesample.odt
+/usr/share/doc/sil-padauk-fonts/documentation/Padauk-typesample.pdf
+/usr/share/fontconfig/conf.avail/65-sil-padauk-fonts.conf
+/usr/share/fonts/sil-padauk-fonts
+/usr/share/fonts/sil-padauk-fonts/Padauk-Bold.ttf
+/usr/share/fonts/sil-padauk-fonts/Padauk-Regular.ttf
+/usr/share/metainfo/org.fedoraproject.sil-padauk-fonts.metainfo.xml

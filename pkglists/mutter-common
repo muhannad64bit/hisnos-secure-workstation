@@ -1,0 +1,9 @@
+/usr/lib/udev/rules.d/61-mutter.rules
+/usr/share/GConf/gsettings/mutter-schemas.convert
+/usr/share/glib-2.0/schemas/org.gnome.mutter.fedora.gschema.override
+/usr/share/glib-2.0/schemas/org.gnome.mutter.gschema.xml
+/usr/share/glib-2.0/schemas/org.gnome.mutter.wayland.gschema.xml
+/usr/share/gnome-control-center/keybindings/50-mutter-navigation.xml
+/usr/share/gnome-control-center/keybindings/50-mutter-system.xml
+/usr/share/gnome-control-center/keybindings/50-mutter-wayland.xml
+/usr/share/gnome-control-center/keybindings/50-mutter-windows.xml

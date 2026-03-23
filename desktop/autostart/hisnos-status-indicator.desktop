@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=HisnOS Status Indicator
+Comment=HisnOS system tray: risk level, vault, and gaming mode status
+Exec=/usr/local/bin/hisnos-status-indicator
+Icon=security-high
+Categories=System;Security;
+X-KDE-autostart-condition=kstatusbartray
+X-KDE-StartupNotify=false
+NoDisplay=true
+
+# XDG autostart: install to ~/.config/autostart/ (user) or
+# /etc/xdg/autostart/ (system-wide).
+# KDE will launch this after the graphical session is ready.

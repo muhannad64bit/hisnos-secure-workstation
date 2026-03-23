@@ -1,0 +1,5 @@
+/usr/share/licenses/smartmontools-selinux
+/usr/share/licenses/smartmontools-selinux/COPYING
+/usr/share/selinux/devel/include/distributed/smartmon.if
+/usr/share/selinux/packages/targeted/smartmon.pp.bz2
+/var/lib/selinux/targeted/active/modules/200/smartmon

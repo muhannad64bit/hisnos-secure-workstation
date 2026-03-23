@@ -58,15 +58,30 @@ type Response struct {
 
 // Server listens on a Unix socket and dispatches JSON-RPC commands.
 type Server struct {
-	socketPath string
-	stateMgr   *state.Manager
-	bus        *eventbus.Bus
-	policy     *policy.Engine
-	vault      *orchestrator.VaultOrchestrator
-	firewall   *orchestrator.FirewallOrchestrator
-	lab        *orchestrator.LabOrchestrator
-	gaming     *orchestrator.GamingOrchestrator
-	update     *orchestrator.UpdateOrchestrator
+	socketPath    string
+	stateMgr      *state.Manager
+	bus           *eventbus.Bus
+	policy        *policy.Engine
+	vault         *orchestrator.VaultOrchestrator
+	firewall      *orchestrator.FirewallOrchestrator
+	lab           *orchestrator.LabOrchestrator
+	gaming        *orchestrator.GamingOrchestrator
+	update        *orchestrator.UpdateOrchestrator
+
+	// safeModeGate is called before any mutating command.
+	// Returns a non-nil error if the command is blocked in safe-mode.
+	// Set via SetSafeModeGate after construction.
+	safeModeGate func(command string) error
+
+	// onAcknowledgeSafeMode is called when the operator sends
+	// {"command":"acknowledge_safe_mode","params":{"confirm":true}}.
+	// The string argument is the operator identifier from params["operator"].
+	onAcknowledgeSafeMode func(operatorID string) error
+
+	// extensionHandlers holds dynamically registered command handlers from
+	// Phase 15 subsystems (performance, automation, ecosystem).
+	// Checked by dispatch() when no built-in command matches.
+	extensionHandlers map[string]func(Request) Response
 }
 
 // New creates an IPC Server.
@@ -91,6 +106,39 @@ func New(
 		lab:        lab,
 		gaming:     gaming,
 		update:     update,
+	}
+}
+
+// SetSafeModeGate injects the safe-mode enforcement function.
+// fn receives the IPC command name and returns an error if it is blocked.
+// Must be called before Run().
+func (s *Server) SetSafeModeGate(fn func(command string) error) {
+	s.safeModeGate = fn
+}
+
+// SetAcknowledgeSafeModeHandler injects the handler called when the operator
+// sends {"command":"acknowledge_safe_mode","params":{"confirm":true}}.
+// The handler should validate exit conditions and transition out of safe-mode.
+func (s *Server) SetAcknowledgeSafeModeHandler(fn func(operatorID string) error) {
+	s.onAcknowledgeSafeMode = fn
+}
+
+// RegisterCommand adds a dynamically registered command handler.
+// fn receives the raw params map and returns either a data map or an error.
+// The IPC server wraps fn with the Request/Response envelope automatically.
+// Thread-safe; must be called before Run().
+// Used by Phase 15 subsystems (performance, automation, ecosystem) to register
+// their commands without creating import cycles between ipc and the new packages.
+func (s *Server) RegisterCommand(name string, fn func(params map[string]any) (map[string]any, error)) {
+	if s.extensionHandlers == nil {
+		s.extensionHandlers = make(map[string]func(Request) Response)
+	}
+	s.extensionHandlers[name] = func(req Request) Response {
+		data, err := fn(req.Params)
+		if err != nil {
+			return errResp(req.ID, err.Error())
+		}
+		return ok(req.ID, data)
 	}
 }
 
@@ -159,8 +207,37 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 }
 
+// readOnlyCommands are never gated by safe-mode — they carry no mutation risk.
+// Phase 15 read-only commands are also listed here so they pass through in safe-mode.
+var readOnlyCommands = map[string]bool{
+	// Core (Phase 14)
+	"get_state":             true,
+	"health":                true,
+	"acknowledge_alert":     true,
+	"acknowledge_safe_mode": true, // ACK is always permitted — it's how we EXIT safe-mode
+	"lock_vault":            true, // locking is always allowed in safe-mode
+	"stop_lab":              true,
+	"stop_gaming":           true,
+	// Performance (Phase 15) — reads only
+	"get_performance_profile": true,
+	// Automation (Phase 15) — reads + suppress override
+	"get_automation_status": true,
+	// Ecosystem (Phase 15) — reads only
+	"get_update_status":   true,
+	"get_module_registry": true,
+	"get_fleet_identity":  true,
+}
+
 // dispatch routes a Request to the appropriate handler.
 func (s *Server) dispatch(req Request) Response {
+	// Enforce safe-mode gate on all mutating commands.
+	if !readOnlyCommands[req.Command] && s.safeModeGate != nil {
+		if err := s.safeModeGate(req.Command); err != nil {
+			log.Printf("[hisnosd/ipc] safe-mode BLOCKED command=%s: %v", req.Command, err)
+			return errResp(req.ID, fmt.Sprintf("safe-mode: %v", err))
+		}
+	}
+
 	switch req.Command {
 	case "get_state":
 		return s.cmdGetState(req)
@@ -182,9 +259,15 @@ func (s *Server) dispatch(req Request) Response {
 		return s.cmdStopGaming(req)
 	case "acknowledge_alert":
 		return ok(req.ID, map[string]any{"acknowledged": true})
+	case "acknowledge_safe_mode":
+		return s.cmdAcknowledgeSafeMode(req)
 	case "health":
 		return s.cmdHealth(req)
 	default:
+		// Check Phase 15 dynamically registered handlers before returning unknown.
+		if h, ok := s.extensionHandlers[req.Command]; ok {
+			return h(req)
+		}
 		return errResp(req.ID, fmt.Sprintf("unknown command: %s", req.Command))
 	}
 }
@@ -363,6 +446,40 @@ func (s *Server) cmdStopGaming(req Request) Response {
 	s.bus.Emit(eventbus.EventGamingStopped, nil)
 	log.Printf("[hisnosd/ipc] gaming stopped")
 	return ok(req.ID, map[string]any{"mode": "normal"})
+}
+
+// cmdAcknowledgeSafeMode handles:
+//
+//	{"command":"acknowledge_safe_mode","params":{"confirm":true,"operator":"<id>"}}
+//
+// This is the operator's signal that conditions have been reviewed and safe-mode
+// may exit (subject to watchdog + risk score checks in the enforcer).
+func (s *Server) cmdAcknowledgeSafeMode(req Request) Response {
+	confirm, _ := req.Params["confirm"].(bool)
+	if !confirm {
+		return errResp(req.ID, "params.confirm must be true")
+	}
+	operatorID, _ := req.Params["operator"].(string)
+	if operatorID == "" {
+		operatorID = "ipc-operator"
+	}
+
+	if s.onAcknowledgeSafeMode == nil {
+		// No handler registered — safe-mode enforcer not wired yet.
+		return errResp(req.ID, "safe-mode acknowledge handler not configured")
+	}
+
+	if err := s.onAcknowledgeSafeMode(operatorID); err != nil {
+		return errResp(req.ID, fmt.Sprintf("safe-mode exit rejected: %v", err))
+	}
+
+	log.Printf("[hisnosd/ipc] safe-mode acknowledged by operator=%s", operatorID)
+	s.bus.Emit(eventbus.EventModeChanged, map[string]any{
+		"from":     "safe-mode",
+		"to":       "normal",
+		"operator": operatorID,
+	})
+	return ok(req.ID, map[string]any{"safe_mode_active": false, "operator": operatorID})
 }
 
 func (s *Server) cmdHealth(req Request) Response {

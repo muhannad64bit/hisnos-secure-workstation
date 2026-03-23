@@ -1,0 +1,5 @@
+/etc/fonts/conf.d/65-0-google-noto-sans-thai-vf.conf
+/usr/share/fontconfig/conf.avail/65-0-google-noto-sans-thai-vf.conf
+/usr/share/fonts/google-noto-vf
+/usr/share/fonts/google-noto-vf/NotoSansThai[wght].ttf
+/usr/share/metainfo/org.fedoraproject.google-noto-sans-thai-vf-fonts.metainfo.xml

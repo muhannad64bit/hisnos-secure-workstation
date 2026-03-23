@@ -1,0 +1,10 @@
+/etc/magic
+/usr/bin/file
+/usr/lib/.build-id
+/usr/lib/.build-id/15
+/usr/lib/.build-id/15/b1179c431b3b039ee917872a5d2002967e6e8d
+/usr/share/doc/file
+/usr/share/doc/file/ChangeLog
+/usr/share/licenses/file
+/usr/share/licenses/file/COPYING
+/usr/share/man/man1/file.1.gz

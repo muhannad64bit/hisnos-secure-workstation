@@ -1,0 +1,6 @@
+/boot/efi/EFI/BOOT/BOOTIA32.EFI
+/boot/efi/EFI/BOOT/fbia32.efi
+/boot/efi/EFI/fedora/BOOTIA32.CSV
+/boot/efi/EFI/fedora/mmia32.efi
+/boot/efi/EFI/fedora/shimia32.efi
+/etc/dnf/protected.d/shim.conf

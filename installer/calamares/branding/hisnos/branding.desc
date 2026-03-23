@@ -1,0 +1,41 @@
+# installer/calamares/branding/hisnos/branding.desc
+# Calamares branding descriptor for HisnOS.
+#
+# Place this directory at:
+#   /usr/share/calamares/branding/hisnos/
+# and reference it in settings.conf as:  branding: hisnos
+
+---
+componentName: hisnos
+
+# ─── Strings ─────────────────────────────────────────────────────────────────
+strings:
+  productName:       "HisnOS"
+  shortProductName:  "HisnOS"
+  version:           "1.0"
+  shortVersion:      "1.0"
+  versionedName:     "HisnOS 1.0"
+  shortVersionedName: "HisnOS 1.0"
+  bootloaderEntryName: "HisnOS"
+  productUrl:        "https://hisnos.local"
+  supportUrl:        "https://hisnos.local/support"
+  releaseNotesUrl:   "https://hisnos.local/release-notes"
+  knownIssuesUrl:    "https://hisnos.local/known-issues"
+
+# ─── Images ──────────────────────────────────────────────────────────────────
+# These files live alongside branding.desc.
+images:
+  productLogo:     "logo.png"          # 80×80
+  productIcon:     "logo.png"
+  productWelcome:  "welcome.png"       # 600×400
+
+# ─── Slideshow ───────────────────────────────────────────────────────────────
+slideshow: "show.qml"
+slideshowAPI: 2
+
+# ─── Style ───────────────────────────────────────────────────────────────────
+style:
+  sidebarBackground:  "#080c12"
+  sidebarText:        "#ccd6f6"
+  sidebarTextHighlight: "#00c8ff"
+  sidebarSelect:      "#1a2030"

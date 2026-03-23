@@ -1,0 +1,4 @@
+/usr/lib/dracut/modules.d/99dnsconfd
+/usr/lib/dracut/modules.d/99dnsconfd/micro_dnsconfd_no_fail.conf
+/usr/lib/dracut/modules.d/99dnsconfd/module-setup.sh
+/usr/lib/dracut/modules.d/99dnsconfd/unbound_non_empty.conf

@@ -1,0 +1,27 @@
+# systemd/hisnos-safe.target
+[Unit]
+Description=HisnOS Safe Mode Recovery Target
+Documentation=man:systemd.special(7)
+Requires=multi-user.target
+Conflicts=graphical.target default.target
+AllowIsolate=yes
+
+# Mask 20+ non-essential subsystems per HisnOS rules to guarantee resources
+Conflicts=bluetooth.service cups.service avahi-daemon.service
+Conflicts=systemd-timesyncd.service udisks2.service fwupd.service
+Conflicts=polkit.service upower.service colord.service ModemManager.service
+Conflicts=rtkit-daemon.service wpa_supplicant.service thermald.service
+Conflicts=accounts-daemon.service switcheroo-control.service
+Conflicts=power-profiles-daemon.service geoclue.service
+Conflicts=flatpak-system-helper.service pcscd.service fprintd.service
+Conflicts=snapd.service packagekit.service
+Conflicts=hisnos-gaming.service hisnos-hispowerd.service
+Conflicts=hisnos-automation.service hisnos-performance-guard.service
+Conflicts=hisnos-threat-engine.service hisnos-irq-balancer.service hisnos-thermal.service
+Conflicts=hisnos-fleet-sync.timer hisnos-searchd.service hisnos-search-ui.service
+Conflicts=hisnos-perf-post-login.service hisnos-onboarding.service hisnos-rt-guard.service
+
+# Services allowed: NetworkManager (basic), rpm-ostree, bash shell, journalctl, fs repair
+
+[Install]
+Alias=default.target

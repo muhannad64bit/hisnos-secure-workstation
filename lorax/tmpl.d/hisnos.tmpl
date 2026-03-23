@@ -1,0 +1,144 @@
+## hisnos.tmpl — Lorax template for HisnOS Secure Workstation
+##
+## Extends the default Fedora lorax template with HisnOS-specific:
+##   - Custom kernel arguments (security hardening)
+##   - Plymouth HisnOS theme injection
+##   - Recovery GRUB menu entry
+##   - HisnOS runtime config injection
+##   - squashfs LiveOS overlay
+##
+## This template is processed by lorax during ISO generation.
+## Variables available: product, version, release, arch, basearch,
+##   libdir, sysroot, inroot, outroot
+##
+## See: /usr/share/lorax/templates.d/80-rhel/config_files/
+## Template DSL reference: /usr/share/lorax/README.product
+
+## ─── Install HisnOS config files into live image ─────────────────────────
+## These end up in /sysroot on the live medium and get copied
+## by the installer.
+
+## HisnOS release metadata
+installpkg hisnos-release 2>/dev/null || true
+
+## Security hardening sysctl
+treeinfo 90-hisnos-hardening.conf /etc/sysctl.d/
+
+## nftables base policy (loaded at first boot)
+treeinfo hisnos-base.nft /etc/nftables.d/
+
+## ─── Plymouth theme ──────────────────────────────────────────────────────────
+## If the hisnos plymouth theme was installed during compose, activate it.
+## Fall back to bgrt (vendor ACPI) if unavailable.
+
+%if exists("/usr/share/plymouth/themes/hisnos")
+  plymouth-set-default-theme hisnos
+%else
+  %if exists("/usr/share/plymouth/themes/bgrt")
+    plymouth-set-default-theme bgrt
+  %else
+    plymouth-set-default-theme charge
+  %end
+%end
+
+## ─── Live kernel args ────────────────────────────────────────────────────────
+## These are appended to the GRUB/isolinux command lines for the live session.
+## They are NOT written to the installed system (Calamares/Anaconda handles that).
+
+## Base: live session identifier
+append_args quiet splash rd.live.image
+## Memory check for containers
+append_args systemd.unified_cgroup_hierarchy=1
+## Audit enabled from first boot
+append_args audit=1
+## Disable transparent huge pages in live (reduces stutter)
+append_args transparent_hugepage=madvise
+## IPv6 enabled by default
+append_args ipv6.disable=0
+## Console for headless recovery
+append_args console=tty0 console=ttyS0,115200n8
+
+## ─── GRUB configuration ───────────────────────────────────────────────────────
+## Generate the GRUB menu for BIOS and EFI boot.
+
+%macro grub_hisnos_entry
+menuentry "HisnOS Secure Workstation" --class hisnos --class gnu-linux {
+    linux   /images/pxeboot/vmlinuz root=live:CDLABEL=HISNOS_1_0 rd.live.image quiet splash audit=1 systemd.unified_cgroup_hierarchy=1 transparent_hugepage=madvise rhgb
+    initrd  /images/pxeboot/initrd.img
+}
+
+menuentry "HisnOS — Safe Mode" --class hisnos {
+    linux   /images/pxeboot/vmlinuz root=live:CDLABEL=HISNOS_1_0 rd.live.image hisnos.recovery=1 hisnos.safemode=1 audit=1 systemd.unit=rescue.target
+    initrd  /images/pxeboot/initrd.img
+}
+
+menuentry "HisnOS — Recovery Shell" --class hisnos {
+    linux   /images/pxeboot/vmlinuz root=live:CDLABEL=HISNOS_1_0 rd.live.image hisnos.recovery=1 systemd.unit=emergency.target
+    initrd  /images/pxeboot/initrd.img
+}
+
+menuentry "Install HisnOS to Disk" --class hisnos --class gnu-linux {
+    linux   /images/pxeboot/vmlinuz root=live:CDLABEL=HISNOS_1_0 rd.live.image inst.stage2=hd:LABEL=HISNOS_1_0 inst.ks=cdrom:/ks/hisnos-install.ks quiet splash audit=1 rhgb
+    initrd  /images/pxeboot/initrd.img
+}
+
+menuentry "Test memory (memtest86+)" --class memtest {
+    linux   /isolinux/memtest
+}
+%end
+
+## Write GRUB config for EFI
+%if exists("${outroot}/EFI")
+  write "${outroot}/EFI/BOOT/grub.cfg" "
+set default=0
+set timeout=10
+set timeout_style=countdown
+
+insmod all_video
+insmod gfxterm
+terminal_output gfxterm
+
+%{grub_hisnos_entry}
+"
+%end
+
+## ─── isolinux config ─────────────────────────────────────────────────────────
+%if exists("${outroot}/isolinux")
+  write "${outroot}/isolinux/isolinux.cfg" "
+default vesamenu.c32
+timeout 100
+display boot.msg
+menu title HisnOS Secure Workstation
+menu background splash.png
+menu color title   1;36;40 #ff3d78ff #00000000
+menu color border  30;44   #ff424242 #00000000
+menu color sel     7;37;40 #ff000000 #ff3d78ff
+
+label live
+  menu label ^Start HisnOS Live
+  menu default
+  kernel vmlinuz
+  append initrd=initrd.img root=live:CDLABEL=HISNOS_1_0 rd.live.image quiet splash audit=1 rhgb
+
+label safemode
+  menu label Start HisnOS ^Safe Mode
+  kernel vmlinuz
+  append initrd=initrd.img root=live:CDLABEL=HISNOS_1_0 rd.live.image hisnos.recovery=1 hisnos.safemode=1
+
+label install
+  menu label ^Install HisnOS to Disk
+  kernel vmlinuz
+  append initrd=initrd.img root=live:CDLABEL=HISNOS_1_0 rd.live.image inst.stage2=hd:LABEL=HISNOS_1_0 inst.ks=cdrom:/ks/hisnos-install.ks quiet
+
+label memtest
+  menu label Test ^Memory
+  kernel memtest
+"
+%end
+
+## ─── Embed HisnOS runtime files ───────────────────────────────────────────
+## Copy HisnOS core scripts into the squashfs live root
+
+%if exists("${sysroot}/usr/local/lib/hisnos")
+  copy "${sysroot}/usr/local/lib/hisnos" "${outroot}/LiveOS/hisnos-runtime"
+%end

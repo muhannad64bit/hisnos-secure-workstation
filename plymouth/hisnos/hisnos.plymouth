@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=HisnOS
+Description=HisnOS Secure Workstation – minimal dark boot theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/hisnos
+ScriptFile=/usr/share/plymouth/themes/hisnos/hisnos.script

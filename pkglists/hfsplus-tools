@@ -1,0 +1,13 @@
+/bin/fsck.hfs
+/bin/fsck.hfsplus
+/bin/mkfs.hfsplus
+/usr/lib/.build-id
+/usr/lib/.build-id/2c
+/usr/lib/.build-id/2c/191a3c12f5dbe6efa2bbda7d69c50a7880570d
+/usr/lib/.build-id/d3
+/usr/lib/.build-id/d3/79de72f38fe01e4ed686f440cc807e4a7f786a
+/usr/share/doc/hfsplus-tools
+/usr/share/doc/hfsplus-tools/apsl-2.0.txt
+/usr/share/man/man8/fsck.hfs.8.gz
+/usr/share/man/man8/fsck.hfsplus.8.gz
+/usr/share/man/man8/mkfs.hfsplus.8.gz

@@ -1,0 +1,15 @@
+[Unit]
+Description=HisnOS Watchdog Periodic Trigger
+Documentation=file:///var/log/hisnos/watchdog.log
+
+[Timer]
+# Fire the watchdog check every 10 seconds.
+# The watchdog.sh script runs one sweep per invocation when used as timer target.
+# This timer is supplementary — hisnos-watchdog.service runs its own poll loop.
+# The timer ensures the watchdog is restarted if it exits unexpectedly.
+OnBootSec=30s
+OnUnitActiveSec=10s
+AccuracySec=2s
+
+[Install]
+WantedBy=timers.target

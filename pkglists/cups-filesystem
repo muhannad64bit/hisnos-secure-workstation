@@ -1,0 +1,13 @@
+/etc/cups
+/etc/cups/ssl
+/usr/lib/cups
+/usr/lib/cups/backend
+/usr/lib/cups/driver
+/usr/lib/cups/filter
+/usr/share/cups
+/usr/share/cups/data
+/usr/share/cups/drv
+/usr/share/cups/mime
+/usr/share/cups/model
+/usr/share/cups/ppdc
+/usr/share/ppd

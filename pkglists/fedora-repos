@@ -1,0 +1,5 @@
+/etc/yum.repos.d
+/etc/yum.repos.d/fedora-cisco-openh264.repo
+/etc/yum.repos.d/fedora-updates-testing.repo
+/etc/yum.repos.d/fedora-updates.repo
+/etc/yum.repos.d/fedora.repo

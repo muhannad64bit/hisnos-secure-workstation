@@ -1,0 +1,33 @@
+[Unit]
+Description=HisnOS System Tray Status Indicator
+Documentation=https://hisnos.local/docs/status-indicator
+After=graphical-session.target
+Wants=graphical-session.target
+# Wait until hisnosd is up so state files exist.
+After=hisnosd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hisnos-status-indicator
+Restart=on-failure
+RestartSec=10
+
+# Resource limits.
+MemoryMax=64M
+CPUQuota=5%
+TasksMax=16
+
+# Minimal capabilities.
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+# Needs access to state files and XDG display.
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/var/lib/hisnos /proc/mounts
+
+Environment=HOME=%h
+PassEnvironment=WAYLAND_DISPLAY DISPLAY DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR
+
+[Install]
+WantedBy=graphical-session.target
